@@ -5,6 +5,19 @@ A brief description of the project.
 
 ## Table of Contents
 
+1. [Description](#description)
+2. [Usage](#usage)
+   - [Cloning the Repository](#cloning-the-repository)
+   - [Setting up the Python Environment](#setting-up-the-python-environment)
+     - [Step 1: Create a Python Environment](#step-1-create-a-python-environment)
+       - [Using conda](#using-conda)
+       - [Using python (virtualenv)](#using-python-virtualenv)
+     - [Step 2: Install the Required Packages](#step-2-install-the-required-packages)
+   - [Running the Project](#running-the-project)
+   - [Submitting Changes](#submitting-changes)
+3. [Repository Section Description](#repository-section-description)
+
+
 # Usage
 To use and interact with the project, follow the guidelines below.
 
