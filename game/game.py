@@ -2,7 +2,6 @@ import numpy as np
 import pygame
 import random
 from pygame import mixer
-from abc import ABC, abstractmethod
 from patterns import Point, Line, CubicBezier, Arc
 
 class GameScene:
