@@ -2,28 +2,23 @@ import numpy as np
 import pygame
 import random
 from patterns import TapPattern, Line, CubicBezier, Arc
+from pattern_manager import PatternManager
+
 
 class GameScene:
     def __init__(self):
-        self.screen_width = 1200
-        self.screen_height = 800
+        self.screen_width = 800
+        self.screen_height = 600
 
         self.window = None
         self.clock = None
         self.steps = 0
         self.fps = 60
-
+        self.seed = 77777777
         self.points = 0
         self.currentScene = 0
 
-        self.tap = TapPattern(250, 400, 50, 5, (255, 0, 0))
-        P0 = np.array([100, 300])
-        P1 = np.array([200, 200])
-        P2 = np.array([300, 220])
-        P3 = np.array([350, 300])
-        self.curve1 = CubicBezier(20, 5, P0, P1, P2, P3, (255, 100, 255))
-        self.curve2 = Arc(20, 5, P1, P2, 100, (0, 0, 255))
-        self.line = Line(20, 5, P2, P1, (0, 255, 0))
+        self.pattern_manager = PatternManager(self.screen_width, self.screen_height, self.seed)
 
     def _init(self, seed=None):
         random.seed(seed)
@@ -54,10 +49,10 @@ class GameScene:
 
     def step(self, action):
         self.steps += 1
-        # self.ball.update()
-        # self.curve.update()
 
     def render(self):
+        fps = self.clock.get_fps()
+        print("Actual FPS:", fps)
         return self._render_frame(False)
 
     def _render_frame(self, terminated):
@@ -69,9 +64,8 @@ class GameScene:
         # win.blit(background, (0, 0))
         win.fill((0, 0, 0))  # Fill the surface with black color
         # rendering objects
-        self.curve1.render(win)
-        self.curve2.render(win)
-        self.line.render(win)
+        # self.pattern_manager.prerender_patterns(win)
+        self.pattern_manager.render_patterns(win, self.steps)
         # render window buffer to screen
         self.window.blit(win, win.get_rect())
         pygame.event.pump()
