@@ -1,9 +1,5 @@
-import numpy as np
-import pygame
 import random
-from pygame import mixer
-import math
-from patterns import *
+from utils.patterns import *
 
 
 class Particle:
