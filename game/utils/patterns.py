@@ -63,17 +63,20 @@ class TapPattern:
         # render more stuff here if needed
 
         if alpha >= 200:
-            width, height = win.get_size()
-            ss_factor = 4  # Increase this value for higher quality antialiasing
-            sup_width = width * ss_factor
-            sup_height = height * ss_factor
-            sup_surface = pygame.Surface((sup_width, sup_height), pygame.SRCALPHA)
-            pygame.draw.circle(sup_surface, (255, 130, 20),
-                               self.point * ss_factor, (self.radius - self.stroke_width) * ss_factor)
-            downsampled_surface = pygame.transform.smoothscale(sup_surface, (width, height))
-            # Draw the downsampled surface onto the window
-            win.blit(downsampled_surface, (0, 0))
+            self.render_based_on_time(win)
         return False
+
+    def render_based_on_time(self, win):
+        width, height = win.get_size()
+        ss_factor = 4  # Increase this value for higher quality antialiasing
+        sup_width = width * ss_factor
+        sup_height = height * ss_factor
+        sup_surface = pygame.Surface((sup_width, sup_height), pygame.SRCALPHA)
+        pygame.draw.circle(sup_surface, (255, 130, 20),
+                           self.point * ss_factor, (self.radius - self.stroke_width) * ss_factor)
+        downsampled_surface = pygame.transform.smoothscale(sup_surface, (width, height))
+        # Draw the downsampled surface onto the window
+        win.blit(downsampled_surface, (0, 0))
 
 
 class SliderPattern(ABC):
@@ -155,23 +158,25 @@ class SliderPattern(ABC):
         win.blit(frame, (0, 0))
 
         if alpha >= 200 and self.starting_t <= t <= self.ending_t:
-            width, height = win.get_size()
-            ss_factor = 2  # Increase this value for higher quality antialiasing
-            sup_width = width * ss_factor
-            sup_height = height * ss_factor
-            sup_surface = pygame.Surface((sup_width, sup_height), pygame.SRCALPHA)
-            total_time = self.ending_t - self.starting_t
-            p = (t - self.starting_t) / total_time
-            p = max(0, min(p, 1)) # clamp
-            pos = self._compute_coordinate(p) * ss_factor
-            x, y = pos.flatten()
-            pygame.draw.circle(sup_surface, (255, 130, 20),
-                               (x, y), (self.radius - self.stroke_width) * ss_factor)
-            downsampled_surface = pygame.transform.smoothscale(sup_surface, (width, height))
-            # Draw the downsampled surface onto the window
-            win.blit(downsampled_surface, (0, 0))
-
+            self.render_based_on_time(win, t)
         return False
+
+    def render_based_on_time(self, win, t):
+        width, height = win.get_size()
+        ss_factor = 2  # Increase this value for higher quality antialiasing
+        sup_width = width * ss_factor
+        sup_height = height * ss_factor
+        sup_surface = pygame.Surface((sup_width, sup_height), pygame.SRCALPHA)
+        total_time = self.ending_t - self.starting_t
+        p = (t - self.starting_t) / total_time
+        p = max(0, min(p, 1))  # clamp
+        pos = self._compute_coordinate(p) * ss_factor
+        x, y = pos.flatten()
+        pygame.draw.circle(sup_surface, (255, 130, 20),
+                           (x, y), (self.radius - self.stroke_width) * ss_factor)
+        downsampled_surface = pygame.transform.smoothscale(sup_surface, (width, height))
+        # Draw the downsampled surface onto the window
+        win.blit(downsampled_surface, (0, 0))
 
 
 class Line(SliderPattern):
@@ -225,9 +230,14 @@ class CubicBezier(SliderPattern):
         self.P2 = P2.reshape((2, 1))
         self.P3 = P3.reshape((2, 1))
 
-        self.N = int((dist1 + dist2 + dist3) / 8)  # number of sampling segments for bezier curve
+        self.N = int((dist1 + dist2 + dist3) / 12)  # number of sampling segments for bezier curve
+        self.ts = np.linspace(0, 1, self.N)
 
         self.points = self._compute_points()
+        self.subdivide_curve(accuracy=0.9)
+        self.segment_lengths = np.linalg.norm(np.diff(self.points, axis=0), axis=1)
+        self.curve_length = np.sum(self.segment_lengths)
+        self.accumulated_lengths = np.cumsum(self.segment_lengths)
         self.normals = self._compute_normals()
         self.vertices = self._compute_vertices(self.radius)
         self.vertices_outer = self._compute_vertices(self.thickness)
@@ -240,16 +250,31 @@ class CubicBezier(SliderPattern):
                f"starting_t={self.starting_t}, ending_t={self.ending_t}, lifetime={self.lifetime}, no. points = {self.N})"
 
     def _compute_coordinate(self, t):
+        target_length = t * self.curve_length
+        if target_length <= 0:
+            return self._compute_point_helper(0.0)
+        elif target_length >= self.curve_length:
+            return self._compute_point_helper(1.0)
+
+        index = np.searchsorted(self.accumulated_lengths, target_length) - 1
+        segment_start_length = self.accumulated_lengths[index]
+        segment_length = self.segment_lengths[index]
+        segment_progress = (target_length - segment_start_length) / segment_length
+        t = self.ts[index] * segment_progress + self.ts[index + 1] * (1 - segment_progress) # interpolate t value
+        return self._compute_point_helper(t)
+
+    def _compute_point_helper(self, t):
         return (1 - t) ** 3 * self.P0 + 3 * (1 - t) ** 2 * t * self.P1 + 3 * (1 - t) * t ** 2 * self.P2 + t ** 3 * \
             self.P3
 
     def _compute_points(self):
         t = np.linspace(0, 1, self.N)
-        points = self._compute_coordinate(t)
+        self.ts = t
+        points = self._compute_point_helper(t)
         return np.transpose(points)
 
     def _compute_normals(self):
-        t = np.linspace(0, 1, self.N)
+        t = self.ts
         dx_dt = 3 * (1 - t) ** 2 * (self.P1[0] - self.P0[0]) + 6 * (1 - t) * t * (
                 self.P2[0] - self.P1[0]) + 3 * t ** 2 * (self.P3[0] - self.P2[0])
         dy_dt = 3 * (1 - t) ** 2 * (self.P1[1] - self.P0[1]) + 6 * (1 - t) * t * (
@@ -262,43 +287,34 @@ class CubicBezier(SliderPattern):
         vertices2 = self.points - width * self.normals
         return np.concatenate((vertices1, vertices2[::-1]), axis=0)
 
-    def _subdivide_curve(self, points, accuracy):
-        for i, point in enumerate(points):
-
-            a = 1
-        return self._subdivide_curve(np.array(new_points), depth - 1)
+    def _subdivide_curve(self, points, ts, accuracy):
+        point1 = points[0]
+        t1 = ts[0]
+        new_points = [points[0]]
+        new_ts = [ts[0]]
+        finished = True
+        for point, t in zip(points[1:], ts[1:]):
+            point2 = point
+            t2 = t
+            mid_pt = (point1 + point2) / 2
+            mid_t = (t1 + t2) / 2
+            actual_point = np.asarray(self._compute_point_helper(mid_t).flatten())
+            if np.linalg.norm(mid_pt - actual_point) > accuracy:
+                #  insert point between the points
+                new_points.append(actual_point)
+                new_ts.append(mid_t)
+                print(f"subdivided point {mid_pt}")
+                finished = False
+            new_points.append(point)
+            new_ts.append(t)
+            point1 = point
+            t1 = t
+        if not finished:
+            new_points, new_ts = list(self._subdivide_curve(np.array(new_points), np.array(new_ts), accuracy))
+        return np.asarray(new_points), np.asarray(new_ts)
 
     def subdivide_curve(self, accuracy):
-        points = [(point, index/self.N) for index, point in enumerate(self.points)]  # attach a t value to each point
-        self.points = self._subdivide_curve(points, accuracy)
-
-    def calculate_points_for_interpolation(self, t):
-        """
-        Calculate a point on the curve at a specific t value, ensuring constant speed along the curve.
-        :param t: The parameter value between 0 and 1.
-        :return: The point on the curve.
-        """
-
-        segment_lengths = np.linalg.norm(np.diff(self.points, axis=0), axis=1)
-        curve_length = np.sum(segment_lengths)
-        target_length = t * curve_length
-
-        accumulated_lengths = np.cumsum(segment_lengths)
-        index = np.searchsorted(accumulated_lengths, target_length)
-
-        if index == 0:
-            interpolated_t = 0.0
-        elif index == self.N:
-            interpolated_t = 1.0
-        else:
-            segment_start_length = accumulated_lengths[index - 1]
-            segment_end_length = accumulated_lengths[index]
-            segment_length = segment_end_length - segment_start_length
-
-            if segment_length == 0.0:
-                interpolated_t = index / self.N
-            else:
-                interpolated_t = (target_length - segment_start_length) / segment_length
+        self.points, self.ts = self._subdivide_curve(self.points, self.ts, accuracy)
 
 
 class Arc(SliderPattern):

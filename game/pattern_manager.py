@@ -68,7 +68,7 @@ class PatternManager:
                 # curve radius must be longer than half the distance between position 1 and position 2
                 dist = np.linalg.norm(position1 - position2)
                 curve_radius = random.uniform(dist / 1.7, dist / 1.05)
-                curve_radius *= random.choice([-1, 1])  # negative curve radius inverts the curve
+                curve_radius *= random.choice([-1, 1])  # negative curve radius inverts the curve direction
                 curve = Arc(self.radius, self.stroke_width, position1, position2, curve_radius, color, starting_t,
                             ending_t, self.lifetime)
                 self.add_pattern(curve)
@@ -128,7 +128,7 @@ class PatternManager:
         self.patterns.remove(pattern)
 
     def prerender_patterns(self, win):
-        for i, pattern in enumerate(self.patterns):
+        for pattern in self.patterns:
             pattern.prerender(win)
 
     def render_patterns(self, win, t):

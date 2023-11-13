@@ -26,13 +26,13 @@ class GameScene:
 
     def _init(self, seed=None):
         random.seed(seed)
-        youtube_url = "https://www.youtube.com/watch?v=Gcto2U0aHTs"
         output_path = "data/audio"
         output_name = "furina.mp3"
 
         filename = os.path.join(output_path, output_name)
         is_from_youtube = not os.path.exists(filename)
         if is_from_youtube:
+            youtube_url = "https://www.youtube.com/watch?v=-jQDMQWfyOo"
             download_youtube_audio(youtube_url, output_path, output_name)
         else:
             print("File already exists. Skipping download.")
@@ -67,9 +67,9 @@ class GameScene:
             if not self.game_started and self.clock.get_fps() > 0.1:
                 mixer.music.play(-1)  # Start music playback
                 self.game_started = True
+            if self.game_started and (not mixer.music.get_busy()):
+                running = False  # Stop the game loop when music finishes playing
             self.render()
-            if len(self.pattern_manager.pattern_queue) == 0:
-                running = False
         self.close()
 
     def reset(self, seed=None, options=None):
@@ -107,7 +107,6 @@ class GameScene:
     def sync_game_and_music(self):
         # sync up game steps and music
         if self.game_started and abs(self.real_time_steps - self.steps) > 1.1:
-            print(f"{self.real_time_steps}   {self.steps}")
             if 0 <= (self.real_time_steps - self.steps) <= 3:
                 self.steps += 1  # try to speed up the game step to keep up
             elif 0 <= (self.steps - self.real_time_steps) <= 3:
