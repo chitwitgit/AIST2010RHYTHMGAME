@@ -26,7 +26,7 @@ class GameScene:
 
     def _init(self, seed=None):
         random.seed(seed)
-        youtube_url = "https://youtu.be/-jQDMQWfyOo?si=0uL3qOBqgn476UkF"
+        youtube_url = "https://www.youtube.com/watch?v=Gcto2U0aHTs"
         output_path = "data/audio"
         output_name = "furina.mp3"
 

@@ -64,7 +64,7 @@ class TapPattern:
 
         if alpha >= 200:
             width, height = win.get_size()
-            ss_factor = 2  # Increase this value for higher quality antialiasing
+            ss_factor = 4  # Increase this value for higher quality antialiasing
             sup_width = width * ss_factor
             sup_height = height * ss_factor
             sup_surface = pygame.Surface((sup_width, sup_height), pygame.SRCALPHA)
@@ -261,6 +261,44 @@ class CubicBezier(SliderPattern):
         vertices1 = self.points + width * self.normals
         vertices2 = self.points - width * self.normals
         return np.concatenate((vertices1, vertices2[::-1]), axis=0)
+
+    def _subdivide_curve(self, points, accuracy):
+        for i, point in enumerate(points):
+
+            a = 1
+        return self._subdivide_curve(np.array(new_points), depth - 1)
+
+    def subdivide_curve(self, accuracy):
+        points = [(point, index/self.N) for index, point in enumerate(self.points)]  # attach a t value to each point
+        self.points = self._subdivide_curve(points, accuracy)
+
+    def calculate_points_for_interpolation(self, t):
+        """
+        Calculate a point on the curve at a specific t value, ensuring constant speed along the curve.
+        :param t: The parameter value between 0 and 1.
+        :return: The point on the curve.
+        """
+
+        segment_lengths = np.linalg.norm(np.diff(self.points, axis=0), axis=1)
+        curve_length = np.sum(segment_lengths)
+        target_length = t * curve_length
+
+        accumulated_lengths = np.cumsum(segment_lengths)
+        index = np.searchsorted(accumulated_lengths, target_length)
+
+        if index == 0:
+            interpolated_t = 0.0
+        elif index == self.N:
+            interpolated_t = 1.0
+        else:
+            segment_start_length = accumulated_lengths[index - 1]
+            segment_end_length = accumulated_lengths[index]
+            segment_length = segment_end_length - segment_start_length
+
+            if segment_length == 0.0:
+                interpolated_t = index / self.N
+            else:
+                interpolated_t = (target_length - segment_start_length) / segment_length
 
 
 class Arc(SliderPattern):

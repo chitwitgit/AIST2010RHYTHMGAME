@@ -39,7 +39,8 @@ class PatternManager:
                                           "Line", "CubicBezier", "Arc"])
             t = onset_time
             starting_t = t
-            ending_t = t + max(onset_duration, self.fps / 2)  # min half second slider
+            ending_t = t + min(max(onset_duration, self.fps / 2),
+                               self.fps)  # hard code clamp duration to half second to one second
             color = (random.randint(50, 255), random.randint(50, 255), random.randint(50, 255))
             if pattern_type == "TapPattern":
                 position = np.array([random.uniform(0, self.screen_width), random.uniform(0, self.screen_height)])
