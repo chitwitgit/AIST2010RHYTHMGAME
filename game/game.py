@@ -6,6 +6,7 @@ from utils import notedetection
 from utils.youtubeDL import download_youtube_audio
 import os
 
+
 class GameScene:
     def __init__(self):
         self.screen_width = 450
@@ -32,7 +33,7 @@ class GameScene:
         filename = os.path.join(output_path, output_name)
         is_from_youtube = not os.path.exists(filename)
         if is_from_youtube:
-            youtube_url = "https://www.youtube.com/watch?v=-jQDMQWfyOo"
+            youtube_url = "https://www.youtube.com/watch?v=yXMPAMKUVgY"
             download_youtube_audio(youtube_url, output_path, output_name)
         else:
             print("File already exists. Skipping download.")
@@ -64,8 +65,8 @@ class GameScene:
                 if event.type == pygame.QUIT:
                     running = False
             self.step()
-            if not self.game_started and self.clock.get_fps() > 0.1:
-                mixer.music.play(-1)  # Start music playback
+            if not self.game_started and self.clock.get_fps() > 1:
+                mixer.music.play()  # Start music playback
                 self.game_started = True
             if self.game_started and (not mixer.music.get_busy()):
                 running = False  # Stop the game loop when music finishes playing

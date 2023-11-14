@@ -4,12 +4,36 @@ import pygame.gfxdraw
 from abc import ABC, abstractmethod
 
 
-def apply_alpha(alpha, win):
+def apply_alpha(win, alpha):
     tmp = pygame.Surface(win.get_size(), pygame.SRCALPHA)
     tmp.fill((255, 255, 255, alpha))
     frame = win.copy()
     frame.blit(tmp, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
     return frame
+
+
+def draw_approach_circle(win, point, relative_time_difference, thickness, stroke_width):
+    if abs(relative_time_difference) >= 0.6:
+        return
+    width, height = win.get_size()
+    ss_factor = 1  # Increase this value for higher quality antialiasing
+    sup_width = width * ss_factor
+    sup_height = height * ss_factor
+    sup_surface = pygame.Surface((sup_width, sup_height), pygame.SRCALPHA)
+    scaling_factor = 1 - 3 * relative_time_difference
+    alpha = (
+        255 - 255 * 1 / (0.6**2) * relative_time_difference**2
+        if relative_time_difference < 0
+        else 255 - 255 * 1 / np.cbrt(0.6) * np.cbrt(relative_time_difference)
+    )
+    pygame.draw.circle(sup_surface, (255, 255, 255, alpha),
+                       point * ss_factor, thickness * scaling_factor * ss_factor)
+    pygame.draw.circle(sup_surface, (0, 0, 0, 0),
+                       point * ss_factor,
+                       (thickness * scaling_factor - stroke_width) * ss_factor)
+    downsampled_surface = pygame.transform.smoothscale(sup_surface, (width, height))
+    # Draw the downsampled surface onto the window
+    win.blit(downsampled_surface, (0, 0))
 
 
 class TapPattern:
@@ -58,25 +82,17 @@ class TapPattern:
         alpha = max(0, min(alpha, 255))  # Clamp alpha between 0 and 255
         if alpha == 0:
             return t >= self.t
-        frame = apply_alpha(alpha, self._prerendered_frame)
+        frame = apply_alpha(self._prerendered_frame, alpha)
         win.blit(frame, (0, 0))
         # render more stuff here if needed
 
-        if alpha >= 200:
-            self.render_based_on_time(win)
+        self.render_based_on_time(win, t)
         return False
 
-    def render_based_on_time(self, win):
-        width, height = win.get_size()
-        ss_factor = 4  # Increase this value for higher quality antialiasing
-        sup_width = width * ss_factor
-        sup_height = height * ss_factor
-        sup_surface = pygame.Surface((sup_width, sup_height), pygame.SRCALPHA)
-        pygame.draw.circle(sup_surface, (255, 130, 20),
-                           self.point * ss_factor, (self.radius - self.stroke_width) * ss_factor)
-        downsampled_surface = pygame.transform.smoothscale(sup_surface, (width, height))
-        # Draw the downsampled surface onto the window
-        win.blit(downsampled_surface, (0, 0))
+    def render_based_on_time(self, win, t):
+        time_difference = t - self.t
+        relative_time_difference = time_difference / self.lifetime
+        draw_approach_circle(win, self.point, relative_time_difference, self.thickness, self.stroke_width)
 
 
 class SliderPattern(ABC):
@@ -154,14 +170,21 @@ class SliderPattern(ABC):
         alpha = max(0, min(alpha, 255))  # Clamp alpha between 0 and 255
         if alpha == 0:
             return t >= self.ending_t
-        frame = apply_alpha(alpha, self._prerendered_frame)
+        frame = apply_alpha(self._prerendered_frame, alpha)
         win.blit(frame, (0, 0))
-
-        if alpha >= 200 and self.starting_t <= t <= self.ending_t:
-            self.render_based_on_time(win, t)
+        self.render_based_on_time(win, t)
         return False
 
     def render_based_on_time(self, win, t):
+        time_difference = t - self.starting_t
+        relative_time_difference = time_difference / self.lifetime
+        draw_approach_circle(win, self.starting_point, relative_time_difference, self.thickness, self.stroke_width)
+        if t <= self.starting_t:
+            self.draw_tracing_circle(win, t, hollow=True)
+        if self.starting_t <= t <= self.ending_t:
+            self.draw_tracing_circle(win, t, hollow=False)
+
+    def draw_tracing_circle(self, win, t, hollow=False):
         width, height = win.get_size()
         ss_factor = 2  # Increase this value for higher quality antialiasing
         sup_width = width * ss_factor
@@ -172,8 +195,17 @@ class SliderPattern(ABC):
         p = max(0, min(p, 1))  # clamp
         pos = self._compute_coordinate(p) * ss_factor
         x, y = pos.flatten()
-        pygame.draw.circle(sup_surface, (255, 130, 20),
-                           (x, y), (self.radius - self.stroke_width) * ss_factor)
+        """pygame.draw.circle(sup_surface, (255, 255, 255, 150),
+                           (x, y), (self.thickness + 2 * self.stroke_width) * ss_factor)
+
+        pygame.draw.circle(sup_surface, (0, 0, 0, 0),
+                           (x, y), (self.thickness + self.stroke_width) * ss_factor)"""
+        pygame.draw.circle(sup_surface, (255, 255, 255, 200),
+                           (x, y), self.thickness * ss_factor)
+        center_color = (0, 0, 0, 0) if hollow else (255, 255, 255, 150)
+        pygame.draw.circle(sup_surface, center_color,
+                           (x, y), self.radius * ss_factor)
+
         downsampled_surface = pygame.transform.smoothscale(sup_surface, (width, height))
         # Draw the downsampled surface onto the window
         win.blit(downsampled_surface, (0, 0))
@@ -200,7 +232,7 @@ class Line(SliderPattern):
                f"lifetime={self.lifetime})"
 
     def _compute_coordinate(self, t):
-        return t * self.P0 + (1 - t) * self.P1
+        return (1 - t) * self.P0 + t * self.P1
 
     def _compute_normal(self):
         direction = self.P1 - self.P0
@@ -230,11 +262,11 @@ class CubicBezier(SliderPattern):
         self.P2 = P2.reshape((2, 1))
         self.P3 = P3.reshape((2, 1))
 
-        self.N = int((dist1 + dist2 + dist3) / 12)  # number of sampling segments for bezier curve
+        self.N = int((dist1 + dist2 + dist3) / 2)  # number of sampling segments for bezier curve
         self.ts = np.linspace(0, 1, self.N)
 
         self.points = self._compute_points()
-        self.subdivide_curve(accuracy=0.9)
+        self.subdivide_curve(accuracy=0.2)
         self.segment_lengths = np.linalg.norm(np.diff(self.points, axis=0), axis=1)
         self.curve_length = np.sum(self.segment_lengths)
         self.accumulated_lengths = np.cumsum(self.segment_lengths)
@@ -260,7 +292,7 @@ class CubicBezier(SliderPattern):
         segment_start_length = self.accumulated_lengths[index]
         segment_length = self.segment_lengths[index]
         segment_progress = (target_length - segment_start_length) / segment_length
-        t = self.ts[index] * segment_progress + self.ts[index + 1] * (1 - segment_progress) # interpolate t value
+        t = self.ts[index] * segment_progress + self.ts[index + 1] * (1 - segment_progress)  # interpolate t value
         return self._compute_point_helper(t)
 
     def _compute_point_helper(self, t):
@@ -332,8 +364,13 @@ class Arc(SliderPattern):
 
         # number of sampling segments (increases as angle difference increases)
         self.N = abs(int(curve_radius * (self.end_angle - self.start_angle) / 15)) + 2
+        self.ts = np.linspace(0, 1, self.N)
 
         self.points = self._compute_points()
+        self.subdivide_curve(accuracy=0.2)
+        self.segment_lengths = np.linalg.norm(np.diff(self.points, axis=0), axis=1)
+        self.curve_length = np.sum(self.segment_lengths)
+        self.accumulated_lengths = np.cumsum(self.segment_lengths)
         self.normals = self._compute_normals()
         self.vertices = self._compute_vertices(self.radius)
         self.vertices_outer = self._compute_vertices(self.thickness)
@@ -355,8 +392,8 @@ class Arc(SliderPattern):
         normal = np.array([-vec[1], vec[0]])
         normalized_normal = normal / np.linalg.norm(normal)
         self.centre = mid_pt + normalized_normal * height  # centre of circle
-        vec0 = self.ending_point - self.centre
-        vec1 = self.starting_point - self.centre
+        vec0 = self.starting_point - self.centre
+        vec1 = self.ending_point - self.centre
         self.start_angle = np.arctan2(vec0[1], vec0[0])
         self.end_angle = np.arctan2(vec1[1], vec1[0])
 
@@ -369,10 +406,11 @@ class Arc(SliderPattern):
 
     def _compute_points(self):
         t = np.linspace(0, 1, self.N)
+        self.ts = t
         return self._compute_coordinate(t)
 
     def _compute_normals(self):
-        t = np.linspace(0, 1, self.N)
+        t = self.ts
         angles = self.start_angle + (self.end_angle - self.start_angle) * t
         dx_dt = -np.sin(angles)
         dy_dt = np.cos(angles)
@@ -382,3 +420,32 @@ class Arc(SliderPattern):
         vertices1 = self.points + width * self.normals
         vertices2 = self.points - width * self.normals
         return np.concatenate((vertices1, vertices2[::-1]), axis=0)
+
+    def _subdivide_curve(self, points, ts, accuracy):
+        point1 = points[0]
+        t1 = ts[0]
+        new_points = [points[0]]
+        new_ts = [ts[0]]
+        finished = True
+        for point, t in zip(points[1:], ts[1:]):
+            point2 = point
+            t2 = t
+            mid_pt = (point1 + point2) / 2
+            mid_t = (t1 + t2) / 2
+            actual_point = np.asarray(self._compute_coordinate(mid_t).flatten())
+            if np.linalg.norm(mid_pt - actual_point) > accuracy:
+                #  insert point between the points
+                new_points.append(actual_point)
+                new_ts.append(mid_t)
+                print(f"subdivided point {mid_pt}")
+                finished = False
+            new_points.append(point)
+            new_ts.append(t)
+            point1 = point
+            t1 = t
+        if not finished:
+            new_points, new_ts = list(self._subdivide_curve(np.array(new_points), np.array(new_ts), accuracy))
+        return np.asarray(new_points), np.asarray(new_ts)
+
+    def subdivide_curve(self, accuracy):
+        self.points, self.ts = self._subdivide_curve(self.points, self.ts, accuracy)

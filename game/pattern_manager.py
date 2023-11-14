@@ -9,7 +9,7 @@ class PatternManager:
         self.fps = fps
         self.radius = 25
         self.stroke_width = 5
-        self.lifetime = 120
+        self.lifetime = 180
         self.seed = seed
 
         self.patterns = []
@@ -41,7 +41,7 @@ class PatternManager:
             starting_t = t
             ending_t = t + min(max(onset_duration, self.fps / 2),
                                self.fps)  # hard code clamp duration to half second to one second
-            color = (random.randint(50, 255), random.randint(50, 255), random.randint(50, 255))
+            color = (random.randint(150, 255), random.randint(150, 255), random.randint(150, 255))
             if pattern_type == "TapPattern":
                 position = np.array([random.uniform(0, self.screen_width), random.uniform(0, self.screen_height)])
                 tap = TapPattern(position, self.radius, self.stroke_width, color, t, self.lifetime)
