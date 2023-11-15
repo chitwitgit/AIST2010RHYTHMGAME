@@ -2,14 +2,28 @@ import numpy as np
 import pygame
 import pygame.gfxdraw
 from abc import ABC, abstractmethod
+from functools import lru_cache
 
 
-def apply_alpha(win, alpha):
-    tmp = pygame.Surface(win.get_size(), pygame.SRCALPHA)
+def apply_alpha(surf, alpha):
+    tmp = pygame.Surface(surf.get_size(), pygame.SRCALPHA)
     tmp.fill((255, 255, 255, alpha))
-    frame = win.copy()
+    frame = surf.copy()
     frame.blit(tmp, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
     return frame
+
+
+@lru_cache
+def circle_surface(color, color_inner, thickness, stroke_width, scaling_factor):
+    surface_size = 200
+    surface = pygame.Surface((surface_size, surface_size), pygame.SRCALPHA)
+    pygame.draw.circle(surface, color,
+                       (surface_size // 2, surface_size // 2),
+                       thickness * scaling_factor)
+    pygame.draw.circle(surface, color_inner,
+                       (surface_size // 2, surface_size // 2),
+                       (thickness * scaling_factor - stroke_width))
+    return surface
 
 
 def draw_approach_circle(win, point, relative_time_difference, thickness, stroke_width):
@@ -20,17 +34,35 @@ def draw_approach_circle(win, point, relative_time_difference, thickness, stroke
     sup_width = width * ss_factor
     sup_height = height * ss_factor
     sup_surface = pygame.Surface((sup_width, sup_height), pygame.SRCALPHA)
-    scaling_factor = 1 - 3 * relative_time_difference
+    scaling_factor = 1 - 2 * relative_time_difference
     alpha = (
-        255 - 255 * 1 / (0.6**2) * relative_time_difference**2
+        255 - 255 * 1 / (0.6 ** 2) * relative_time_difference ** 2
         if relative_time_difference < 0
         else 255 - 255 * 1 / np.cbrt(0.6) * np.cbrt(relative_time_difference)
     )
-    pygame.draw.circle(sup_surface, (255, 255, 255, alpha),
-                       point * ss_factor, thickness * scaling_factor * ss_factor)
-    pygame.draw.circle(sup_surface, (0, 0, 0, 0),
-                       point * ss_factor,
-                       (thickness * scaling_factor - stroke_width) * ss_factor)
+    circle = circle_surface((255, 255, 255, alpha), (0, 0, 0, 0),
+                            thickness * ss_factor, stroke_width * ss_factor, scaling_factor)
+    rect = circle.get_rect(center=point * ss_factor)
+    sup_surface.blit(circle, rect)
+    downsampled_surface = pygame.transform.smoothscale(sup_surface, (width, height))
+    # Draw the downsampled surface onto the window
+    win.blit(downsampled_surface, (0, 0))
+
+
+def draw_clicked_circle(win, point, relative_time_difference, thickness, stroke_width):
+    if abs(relative_time_difference) >= 0.3:
+        return
+    width, height = win.get_size()
+    ss_factor = 1  # Increase this value for higher quality antialiasing
+    sup_width = width * ss_factor
+    sup_height = height * ss_factor
+    sup_surface = pygame.Surface((sup_width, sup_height), pygame.SRCALPHA)
+    scaling_factor = np.cbrt(1 + 8 * relative_time_difference)
+    alpha = 255 - 255 * 1 / np.cbrt(0.3) * np.cbrt(relative_time_difference)
+    circle = circle_surface((255, 255, 255, alpha), (0, 0, 0, 0),
+                            thickness * ss_factor, stroke_width * ss_factor, scaling_factor)
+    rect = circle.get_rect(center=point * ss_factor)
+    sup_surface.blit(circle, rect)
     downsampled_surface = pygame.transform.smoothscale(sup_surface, (width, height))
     # Draw the downsampled surface onto the window
     win.blit(downsampled_surface, (0, 0))
@@ -46,6 +78,10 @@ class TapPattern:
         self.t = t
         self.lifetime = lifetime
         self._prerendered_frame = None
+        self.pressed = False
+        self.press_time = 0
+        self.starting_point = point
+        self.ending_point = point
 
     def __repr__(self):
         return f"TapPattern(point={self.point}, radius={self.radius}, stroke_width={self.stroke_width}, " \
@@ -70,7 +106,26 @@ class TapPattern:
 
         self._prerendered_frame = downsampled_surface
 
+    def update(self, t, mouse_previous_state):
+        self.check_mouse(t, mouse_previous_state)
+
+    def check_mouse(self, t, mouse_previous_state):
+        if self.pressed:
+            return
+        time_difference = t - self.t
+        relative_time_difference = time_difference / self.lifetime
+        if -0.4 < relative_time_difference < 0.2:  # allow for early clicks but don't register clicks that are too late
+            # Get the current mouse position
+            mouse_pos = pygame.mouse.get_pos()
+            is_inside_circle = np.linalg.norm(np.asarray(mouse_pos) - self.point) < self.thickness
+            left_click_pressed = pygame.mouse.get_pressed()[0]
+            if is_inside_circle and left_click_pressed and not mouse_previous_state:  # inside the circle and is clicking
+                self.pressed = True
+                self.press_time = t
+
     def render(self, win, t):
+        if self.pressed:
+            return self.render_based_on_pressed(win, t)
         if self._prerendered_frame is None:
             self.prerender(win)
 
@@ -94,6 +149,12 @@ class TapPattern:
         relative_time_difference = time_difference / self.lifetime
         draw_approach_circle(win, self.point, relative_time_difference, self.thickness, self.stroke_width)
 
+    def render_based_on_pressed(self, win, t):
+        time_difference = t - self.press_time
+        relative_time_difference = time_difference / self.lifetime
+        draw_clicked_circle(win, self.point, relative_time_difference, self.thickness, self.stroke_width)
+        return abs(relative_time_difference) > 0.6
+
 
 class SliderPattern(ABC):
     def __init__(self, radius, stroke_width, starting_point,
@@ -110,6 +171,8 @@ class SliderPattern(ABC):
         self.ending_t = ending_t
         self.lifetime = lifetime
         self._prerendered_frame = None
+        self.pressed = False
+        self.press_time = 0
 
     @abstractmethod
     def _compute_coordinate(self, t):
@@ -118,6 +181,23 @@ class SliderPattern(ABC):
     @abstractmethod
     def _compute_vertices(self, width):
         pass
+
+    def update(self, t, mouse_previous_state):
+        self.check_mouse(t, mouse_previous_state)
+
+    def check_mouse(self, t, mouse_previous_state):
+        if self.pressed:
+            return
+        time_difference = t - self.starting_t
+        relative_time_difference = time_difference / self.lifetime
+        if abs(relative_time_difference) < 0.3:
+            # Get the current mouse position
+            mouse_pos = pygame.mouse.get_pos()
+            is_inside_circle = np.linalg.norm(np.asarray(mouse_pos) - self.starting_point) < self.thickness
+            left_click_pressed = pygame.mouse.get_pressed()[0]
+            if is_inside_circle and left_click_pressed and not mouse_previous_state:  # inside the circle and is clicking
+                self.pressed = True
+                self.press_time = t
 
     def prerender(self, win):
         # Create a surface with higher resolution for supersampling
@@ -173,16 +253,27 @@ class SliderPattern(ABC):
         frame = apply_alpha(self._prerendered_frame, alpha)
         win.blit(frame, (0, 0))
         self.render_based_on_time(win, t)
+        self.render_based_on_pressed(win, t)
         return False
 
     def render_based_on_time(self, win, t):
-        time_difference = t - self.starting_t
-        relative_time_difference = time_difference / self.lifetime
-        draw_approach_circle(win, self.starting_point, relative_time_difference, self.thickness, self.stroke_width)
         if t <= self.starting_t:
             self.draw_tracing_circle(win, t, hollow=True)
         if self.starting_t <= t <= self.ending_t:
             self.draw_tracing_circle(win, t, hollow=False)
+
+        if not self.pressed:
+            time_difference = t - self.starting_t
+            relative_time_difference = time_difference / self.lifetime
+            draw_approach_circle(win, self.starting_point, relative_time_difference, self.thickness, self.stroke_width)
+
+    def render_based_on_pressed(self, win, t):
+        if not self.pressed:
+            return
+        time_difference = t - self.press_time
+        relative_time_difference = time_difference / self.lifetime
+        draw_clicked_circle(win, self.starting_point, relative_time_difference, self.thickness, self.stroke_width)
+        return abs(relative_time_difference) > 0.6
 
     def draw_tracing_circle(self, win, t, hollow=False):
         width, height = win.get_size()
@@ -194,17 +285,23 @@ class SliderPattern(ABC):
         p = (t - self.starting_t) / total_time
         p = max(0, min(p, 1))  # clamp
         pos = self._compute_coordinate(p) * ss_factor
-        x, y = pos.flatten()
+        pos = pos.flatten()
+
         """pygame.draw.circle(sup_surface, (255, 255, 255, 150),
                            (x, y), (self.thickness + 2 * self.stroke_width) * ss_factor)
 
         pygame.draw.circle(sup_surface, (0, 0, 0, 0),
                            (x, y), (self.thickness + self.stroke_width) * ss_factor)"""
-        pygame.draw.circle(sup_surface, (255, 255, 255, 200),
-                           (x, y), self.thickness * ss_factor)
+
         center_color = (0, 0, 0, 0) if hollow else (255, 255, 255, 150)
-        pygame.draw.circle(sup_surface, center_color,
-                           (x, y), self.radius * ss_factor)
+        circle = circle_surface((255, 255, 255, 255), center_color,
+                                self.thickness * ss_factor, self.stroke_width * ss_factor, 1)
+
+        # to prevent some weird runtime errors formed by weird floating point ops
+        pos = np.clip(pos, -2147483648, 2147483647)
+
+        rect = circle.get_rect(center=pos)
+        sup_surface.blit(circle, rect)
 
         downsampled_surface = pygame.transform.smoothscale(sup_surface, (width, height))
         # Draw the downsampled surface onto the window
@@ -212,18 +309,23 @@ class SliderPattern(ABC):
 
 
 class Line(SliderPattern):
-    def __init__(self, radius, stroke_width, P0, P1, color, starting_t, ending_t, lifetime):
+    def __init__(self, radius, stroke_width, P0, P1, color, starting_t, ending_t, lifetime, length=-1):
         self.radius = radius
         self.stroke_width = stroke_width
         self.thickness = radius + self.stroke_width
         self.color = color
         self.P0 = P0
         self.P1 = P1
+        vec = self.P1 - self.P0
+        self.length = np.linalg.norm(vec)
+        if length > 0:
+            scale_ratio = length / self.length  # scale up/down the line to match the intended length
+            self.P1 = self.P0 + vec * scale_ratio
         self.normal = self._compute_normal()
 
         self.vertices = self._compute_vertices(self.radius)
         self.vertices_outer = self._compute_vertices(self.thickness)
-        super().__init__(radius, stroke_width, P0, P1, color,
+        super().__init__(radius, stroke_width, self.P0, self.P1, color,
                          self.vertices, self.vertices_outer, starting_t, ending_t, lifetime)
 
     def __repr__(self):
@@ -248,7 +350,7 @@ class Line(SliderPattern):
 
 
 class CubicBezier(SliderPattern):
-    def __init__(self, radius, stroke_width, P0, P1, P2, P3, color, starting_t, ending_t, lifetime):
+    def __init__(self, radius, stroke_width, P0, P1, P2, P3, color, starting_t, ending_t, lifetime, length=-1):
         self.radius = radius
         self.stroke_width = stroke_width
         self.thickness = radius + self.stroke_width
@@ -257,23 +359,32 @@ class CubicBezier(SliderPattern):
         dist2 = np.linalg.norm(P2 - P1)
         dist3 = np.linalg.norm(P3 - P2)
 
-        self.P0 = P0.reshape((2, 1))
-        self.P1 = P1.reshape((2, 1))
-        self.P2 = P2.reshape((2, 1))
-        self.P3 = P3.reshape((2, 1))
+        self.P0 = P0
+        self.P1 = P1
+        self.P2 = P2
+        self.P3 = P3
 
         self.N = int((dist1 + dist2 + dist3) / 2)  # number of sampling segments for bezier curve
         self.ts = np.linspace(0, 1, self.N)
 
         self.points = self._compute_points()
-        self.subdivide_curve(accuracy=0.2)
         self.segment_lengths = np.linalg.norm(np.diff(self.points, axis=0), axis=1)
-        self.curve_length = np.sum(self.segment_lengths)
+        self.length = np.sum(self.segment_lengths)
+        if length > 0:
+            vec1 = P1 - P0
+            vec2 = P2 - P0
+            vec3 = P3 - P0
+            scale_ratio = length / self.length  # scale up/down the line to match the intended length
+            self.P1 = self.P0 + vec1 * scale_ratio
+            self.P2 = self.P0 + vec2 * scale_ratio
+            self.P3 = self.P0 + vec3 * scale_ratio
+            self.points = self._compute_points()  # recalculate the points
+        self.subdivide_curve(accuracy=0.2)
         self.accumulated_lengths = np.cumsum(self.segment_lengths)
         self.normals = self._compute_normals()
         self.vertices = self._compute_vertices(self.radius)
         self.vertices_outer = self._compute_vertices(self.thickness)
-        super().__init__(radius, stroke_width, P0, P3, color,
+        super().__init__(radius, stroke_width, self.P0, self.P3, color,
                          self.vertices, self.vertices_outer, starting_t, ending_t, lifetime)
 
     def __repr__(self):
@@ -282,10 +393,10 @@ class CubicBezier(SliderPattern):
                f"starting_t={self.starting_t}, ending_t={self.ending_t}, lifetime={self.lifetime}, no. points = {self.N})"
 
     def _compute_coordinate(self, t):
-        target_length = t * self.curve_length
+        target_length = t * self.length
         if target_length <= 0:
             return self._compute_point_helper(0.0)
-        elif target_length >= self.curve_length:
+        elif target_length >= self.length:
             return self._compute_point_helper(1.0)
 
         index = np.searchsorted(self.accumulated_lengths, target_length) - 1
@@ -296,8 +407,8 @@ class CubicBezier(SliderPattern):
         return self._compute_point_helper(t)
 
     def _compute_point_helper(self, t):
-        return (1 - t) ** 3 * self.P0 + 3 * (1 - t) ** 2 * t * self.P1 + 3 * (1 - t) * t ** 2 * self.P2 + t ** 3 * \
-            self.P3
+        return ((1 - t) ** 3 * self.P0.reshape((2, 1)) + 3 * (1 - t) ** 2 * t * self.P1.reshape((2, 1))
+                + 3 * (1 - t) * t ** 2 * self.P2.reshape((2, 1)) + t ** 3 * self.P3.reshape((2, 1)))
 
     def _compute_points(self):
         t = np.linspace(0, 1, self.N)
@@ -335,7 +446,7 @@ class CubicBezier(SliderPattern):
                 #  insert point between the points
                 new_points.append(actual_point)
                 new_ts.append(mid_t)
-                print(f"subdivided point {mid_pt}")
+                # print(f"subdivided point {mid_pt}")
                 finished = False
             new_points.append(point)
             new_ts.append(t)
@@ -351,7 +462,7 @@ class CubicBezier(SliderPattern):
 
 class Arc(SliderPattern):
     def __init__(self, radius, stroke_width, starting_point, ending_point, curve_radius, color, starting_t, ending_t,
-                 lifetime):
+                 lifetime, length=-1):
         self.radius = radius
         self.stroke_width = stroke_width
         self.thickness = radius + self.stroke_width
@@ -361,6 +472,13 @@ class Arc(SliderPattern):
 
         self.curve_radius = curve_radius
         self._compute_arc()
+        self.length = self.curve_radius * (self.end_angle - self.start_angle)
+        if length > 0:
+            vec = ending_point - starting_point
+            scale_ratio = length / self.length  # scale up/down the line to match the intended length
+            self.ending_point = self.starting_point + vec * scale_ratio
+            self.curve_radius = self.curve_radius * scale_ratio
+            self._compute_arc()  # recalculate the arc
 
         # number of sampling segments (increases as angle difference increases)
         self.N = abs(int(curve_radius * (self.end_angle - self.start_angle) / 15)) + 2
@@ -368,13 +486,11 @@ class Arc(SliderPattern):
 
         self.points = self._compute_points()
         self.subdivide_curve(accuracy=0.2)
-        self.segment_lengths = np.linalg.norm(np.diff(self.points, axis=0), axis=1)
-        self.curve_length = np.sum(self.segment_lengths)
-        self.accumulated_lengths = np.cumsum(self.segment_lengths)
+
         self.normals = self._compute_normals()
         self.vertices = self._compute_vertices(self.radius)
         self.vertices_outer = self._compute_vertices(self.thickness)
-        super().__init__(radius, stroke_width, starting_point, ending_point, color,
+        super().__init__(radius, stroke_width, self.starting_point, self.ending_point, color,
                          self.vertices, self.vertices_outer, starting_t, ending_t, lifetime)
 
     def __repr__(self):

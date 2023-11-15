@@ -9,21 +9,22 @@ import os
 
 class GameScene:
     def __init__(self):
-        self.screen_width = 450
-        self.screen_height = 800
+        self.screen_width = 360
+        self.screen_height = 640
 
         self.window = None
         self.clock = None
         self.steps = 0
         self.real_time_steps = 0
         self.fps = 60
-        self.seed = 77777777
+        self.seed = 777777778
         self.points = 0
         self.currentScene = 0
 
         self.pattern_manager = PatternManager(self.screen_width, self.screen_height, self.fps, self.seed, difficulty=1)
         self.background = None
         self.game_started = False
+        self.previous_mouse_clicked = False
 
     def _init(self, seed=None):
         random.seed(seed)
@@ -46,15 +47,20 @@ class GameScene:
             mixer.music.set_volume(0.8)
         if self.clock is None:
             self.clock = pygame.time.Clock()
+        pygame.mouse.set_visible(False)  # hides the cursor and will draw a better cursor
         win = pygame.Surface((self.screen_width, self.screen_height))
         win.fill((0, 0, 0))
         music_data = notedetection.process_audio(filename)
         if is_from_youtube:
             os.remove(filename)
+        self.cursor_img = pygame.image.load('data/images/cursor.png').convert_alpha()
+        self.cursor_img_rect = self.cursor_img.get_rect()
+        self.cursor_pressed_img = pygame.image.load('data/images/cursor_pressed.png').convert_alpha()
+        self.cursor_pressed_img_rect = self.cursor_pressed_img.get_rect()
         self.pattern_manager.generate_map(music_data)
         self.pattern_manager.prerender_patterns(win)
         if self.background is None:
-            background = pygame.image.load("data/images/furina.jpg").convert_alpha()
+            background = pygame.image.load("data/images/furina.jpg").convert()
             self.background = pygame.transform.smoothscale(background, (self.screen_width, self.screen_height))
 
     def run(self, seed=None):
@@ -64,6 +70,9 @@ class GameScene:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        running = False
             self.step()
             if not self.game_started and self.clock.get_fps() > 1:
                 mixer.music.play()  # Start music playback
@@ -80,6 +89,9 @@ class GameScene:
     def step(self, action=None):
         if self.game_started:
             self.steps += 1
+            self.pattern_manager.update_patterns(self.steps, self.previous_mouse_clicked)
+            self.previous_mouse_clicked = pygame.mouse.get_pressed()[0]
+
 
     def render(self):
         fps = self.clock.get_fps()
@@ -93,12 +105,17 @@ class GameScene:
             _ = 1  # do something
 
         self.sync_game_and_music()
-
         win = pygame.Surface((self.screen_width, self.screen_height))
         win.blit(self.background, (0, 0))
         # win.fill((0, 0, 0))  # Fill the surface with black color
         # rendering objects
         self.pattern_manager.render_patterns(win, self.steps)
+        if pygame.mouse.get_pressed()[0]:
+            self.cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
+            win.blit(self.cursor_pressed_img, self.cursor_pressed_img_rect)  # draw the cursor
+        else:
+            self.cursor_img_rect.center = pygame.mouse.get_pos()  # update position
+            win.blit(self.cursor_img, self.cursor_img_rect)  # draw the cursor
         # render window buffer to screen
         self.window.blit(win, win.get_rect())
         pygame.event.pump()

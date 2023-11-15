@@ -50,7 +50,7 @@ class PatternManager:
                 position1 = np.array([random.uniform(0, self.screen_width), random.uniform(0, self.screen_height)])
                 position2 = np.array([random.uniform(0, self.screen_width), random.uniform(0, self.screen_height)])
                 line = Line(self.radius, self.stroke_width, position1, position2, color, starting_t, ending_t,
-                            self.lifetime)
+                            self.lifetime, length=100)
                 self.add_pattern(line)
                 last_onset_time = ending_t
             elif pattern_type == "CubicBezier":
@@ -59,7 +59,7 @@ class PatternManager:
                 position3 = np.array([random.uniform(0, self.screen_width), random.uniform(0, self.screen_height)])
                 position4 = np.array([random.uniform(0, self.screen_width), random.uniform(0, self.screen_height)])
                 curve = CubicBezier(self.radius, self.stroke_width, position1, position2, position3, position4, color,
-                                    starting_t, ending_t, self.lifetime)
+                                    starting_t, ending_t, self.lifetime, length=100)
                 self.add_pattern(curve)
                 last_onset_time = ending_t
             else:
@@ -70,7 +70,7 @@ class PatternManager:
                 curve_radius = random.uniform(dist / 1.7, dist / 1.05)
                 curve_radius *= random.choice([-1, 1])  # negative curve radius inverts the curve direction
                 curve = Arc(self.radius, self.stroke_width, position1, position2, curve_radius, color, starting_t,
-                            ending_t, self.lifetime)
+                            ending_t, self.lifetime, length=100)
                 self.add_pattern(curve)
                 last_onset_time = ending_t
 
@@ -130,6 +130,10 @@ class PatternManager:
     def prerender_patterns(self, win):
         for pattern in self.patterns:
             pattern.prerender(win)
+
+    def update_patterns(self, t, mouse_previous_state):
+        for pattern in self.pattern_queue:
+            pattern.update(t, mouse_previous_state)
 
     def render_patterns(self, win, t):
         for pattern in self.pattern_queue:
