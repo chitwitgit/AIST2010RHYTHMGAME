@@ -27,7 +27,7 @@ class GameScene:
 
     def _init(self, seed=None):
         random.seed(seed)
-        output_path = "data/audio"
+        output_path = os.path.join("data", "audio")
         output_name = "furina.mp3"
 
         filename = os.path.join(output_path, output_name)

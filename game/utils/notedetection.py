@@ -19,7 +19,7 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512):
 
 
 # detect length of each onsets
-def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=512, sr=22050, tolerance=3):
+def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=512, sr=22050, tolerance=1):
     residual_size = fft_length - fft_hop_length
     filtered_onset_samples = onset_samples
     filtered_onset_samples[onset_samples < fft_length] = fft_length - residual_size
@@ -59,14 +59,15 @@ def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=
         diff = np.mean((old_frame - new_onset_frame) ** 2, axis=0)
 
         satisfaction = np.ones((onset_samples.shape[0]))
+
         #         compute distribution difference
-        satisfaction = np.logical_and(satisfaction, diff > 0.5)
+        # satisfaction = np.logical_and(satisfaction, diff > 0.5)
 
-        #         satisfaction = np.abs(new_peaks - old_peaks) <= tolerance
-        #         use max frequency amplitude
-        #         satisfaction = np.logical_and(satisfaction, new_amplitude >= old_amplitude / 2)
+        satisfaction = np.abs(new_peaks - old_peaks) <= tolerance
+        # use max frequency amplitude
+        # satisfaction = np.logical_and(satisfaction, new_amplitude >= old_amplitude / 2)
 
-        #         use fix overall amplitude
+        # use fix overall amplitude
         interval_samples = np.arange(-local_range, local_range).reshape(1, -1) + temp_onset_samples.reshape(-1, 1)
         cur_amplitude = abs_x[interval_samples].reshape(-1, 2 * local_range)
         cur_amplitude = np.max(cur_amplitude, axis=1)
