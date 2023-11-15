@@ -6,20 +6,30 @@ def load_audio(filename):
     x, fs = librosa.load(filename)
     return x, fs
 
+def onset_roundings(onset_times, onset_durations, tempo, precision=0.25):
+    spb = 60 / tempo * precision
+    onset_times = np.around(onset_times / spb, decimals=0) * spb
+    onset_durations = np.clip(onset_durations, spb, 99999)
+    return onset_times, onset_durations
 
 def onset_detection(x, fs, fft_length=1024, fft_hop_length=512):
     y = abs(librosa.stft(x, n_fft=fft_length, hop_length=fft_hop_length, center=False))
     onset_env = librosa.onset.onset_strength(y=x, sr=fs)
+    tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=fs)
+    print('tempo:', tempo)
+
     onset_frames = librosa.onset.onset_detect(onset_envelope=onset_env, sr=fs)
     # using onset_detect from librosa to detect onsets (using parameters delta=0.04, wait=4)
     onset_times = librosa.frames_to_time(onset_frames, sr=fs)
     onset_samples = librosa.frames_to_samples(onset_frames)
     onset_durations = onset_length_detection(x, y, onset_samples)
+
+    onset_times, onset_durations = onset_roundings(onset_times, onset_durations, tempo)
     return onset_times, onset_durations
 
 
 # detect length of each onsets
-def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=512, sr=22050, tolerance=1):
+def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=512, sr=22050, tolerance=2):
     residual_size = fft_length - fft_hop_length
     filtered_onset_samples = onset_samples
     filtered_onset_samples[onset_samples < fft_length] = fft_length - residual_size
@@ -60,10 +70,14 @@ def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=
 
         satisfaction = np.ones((onset_samples.shape[0]))
 
-        #         compute distribution difference
+        # compute distribution difference
         # satisfaction = np.logical_and(satisfaction, diff > 0.5)
+        satisfaction = np.logical_and(satisfaction, diff < 0.5)
 
-        satisfaction = np.abs(new_peaks - old_peaks) <= tolerance
+
+        # check change in max frequency peak
+        satisfaction = np.logical_and(satisfaction, np.abs(new_peaks - old_peaks) <= tolerance)
+
         # use max frequency amplitude
         # satisfaction = np.logical_and(satisfaction, new_amplitude >= old_amplitude / 2)
 
@@ -71,9 +85,10 @@ def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=
         interval_samples = np.arange(-local_range, local_range).reshape(1, -1) + temp_onset_samples.reshape(-1, 1)
         cur_amplitude = abs_x[interval_samples].reshape(-1, 2 * local_range)
         cur_amplitude = np.max(cur_amplitude, axis=1)
-        #         mask2 = (cur_amplitude >= standard_amplitude / 1.7)
         mask2 = (standard_amplitude - cur_amplitude <= standard_amplitude * 0.8)
         satisfaction = np.logical_and(satisfaction, mask2)
+
+
         valid_mask = np.logical_and(valid_mask, satisfaction)
         length_sum += valid_mask
 
