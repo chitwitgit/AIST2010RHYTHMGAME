@@ -17,7 +17,7 @@ class PatternManager:
         self.queue_length = 8
 
     def generate_map(self, music_data):
-        onset_times, onset_durations = music_data
+        onset_times, onset_durations, *_ = music_data
         onset_time_frames = [int(i * self.fps) for i in onset_times]
         onset_duration_frames = [int(i * self.fps) for i in onset_durations]
         # self.generate_random_patterns(100)

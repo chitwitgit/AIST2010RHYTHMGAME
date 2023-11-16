@@ -27,19 +27,22 @@ def circle_surface(color, color_inner, thickness, stroke_width, scaling_factor):
 
 
 def draw_approach_circle(win, point, relative_time_difference, thickness, stroke_width):
-    if abs(relative_time_difference) >= 0.6:
+    approach_rate = 2.5
+    approach_constant = 1 / approach_rate
+    if abs(relative_time_difference) >= approach_constant:
         return
     width, height = win.get_size()
     ss_factor = 1  # Increase this value for higher quality antialiasing
     sup_width = width * ss_factor
     sup_height = height * ss_factor
     sup_surface = pygame.Surface((sup_width, sup_height), pygame.SRCALPHA)
-    scaling_factor = 1 - 2 * relative_time_difference
+    scaling_factor = 1 - 3.5 * relative_time_difference
     alpha = (
-        255 - 255 * 1 / (0.6 ** 2) * relative_time_difference ** 2
+        255 - 255 * 1 / approach_constant ** 2 * relative_time_difference ** 2
         if relative_time_difference < 0
-        else 255 - 255 * 1 / np.cbrt(0.6) * np.cbrt(relative_time_difference)
+        else 255 - 255 * 1 / np.cbrt(approach_constant) * np.cbrt(relative_time_difference)
     )
+    alpha = min(max(alpha, 0), 255)
     circle = circle_surface((255, 255, 255, alpha), (0, 0, 0, 0),
                             thickness * ss_factor, stroke_width * ss_factor, scaling_factor)
     rect = circle.get_rect(center=point * ss_factor)
@@ -59,6 +62,7 @@ def draw_clicked_circle(win, point, relative_time_difference, thickness, stroke_
     sup_surface = pygame.Surface((sup_width, sup_height), pygame.SRCALPHA)
     scaling_factor = np.cbrt(1 + 8 * relative_time_difference)
     alpha = 255 - 255 * 1 / np.cbrt(0.3) * np.cbrt(relative_time_difference)
+    alpha = min(max(alpha, 0), 255)
     circle = circle_surface((255, 255, 255, alpha), (0, 0, 0, 0),
                             thickness * ss_factor, stroke_width * ss_factor, scaling_factor)
     rect = circle.get_rect(center=point * ss_factor)
