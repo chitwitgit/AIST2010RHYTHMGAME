@@ -40,7 +40,7 @@ def vocal_separation(y, sr):
 
     # We can also use a margin to reduce bleed between the vocals and instrumentation masks.
     # Note: the margins need not be equal for foreground and background separation
-    margin_i, margin_v = 2, 14
+    margin_i, margin_v = 2, 10
     power = 2
 
     mask_i = librosa.util.softmask(S_filter,
