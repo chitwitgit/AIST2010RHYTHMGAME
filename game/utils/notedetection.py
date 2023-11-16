@@ -2,6 +2,66 @@ import numpy as np
 import librosa
 
 
+def vocal_separation(y, sr):
+    # filename = r"C:\Users\lun\OneDrive\Documents\CUHK\Academics\AIST\AIST2010\AIST2010RHYTHMGAME\game\data\audio\akari2.mp3"
+    # y, sr = librosa.load(filename, duration=120)
+
+    # And compute the spectrogram magnitude and phase
+    S_full, phase = librosa.magphase(librosa.stft(y))
+
+    # Play back a 5-second excerpt with vocals
+    # Audio(data=y[10 * sr:15 * sr], rate=sr)
+
+    # S_filter = librosa.decompose.nn_filter(S_full,
+    #                                        aggregate=np.median,
+    #                                        metric='cosine',
+    #                                        width=int(librosa.time_to_frames(2, sr=sr)))
+    #
+    # S_filter = np.minimum(S_full, S_filter)
+
+    # We'll compare frames using cosine similarity, and aggregate similar frames
+    # by taking their (per-frequency) median value.
+    #
+    # To avoid being biased by local continuity, we constrain similar frames to be
+    # separated by at least 2 seconds.
+    #
+    # This suppresses sparse/non-repetetitive deviations from the average spectrum,
+    # and works well to discard vocal elements.
+
+    S_filter = librosa.decompose.nn_filter(S_full,
+                                           aggregate=np.median,
+                                           metric='cosine',
+                                           width=int(librosa.time_to_frames(0.5, sr=sr)))
+
+    # The output of the filter shouldn't be greater than the input
+    # if we assume signals are additive.  Taking the pointwise minimum
+    # with the input spectrum forces this.
+    S_filter = np.minimum(S_full, S_filter)
+
+    # We can also use a margin to reduce bleed between the vocals and instrumentation masks.
+    # Note: the margins need not be equal for foreground and background separation
+    margin_i, margin_v = 2, 14
+    power = 2
+
+    mask_i = librosa.util.softmask(S_filter,
+                                   margin_i * (S_full - S_filter),
+                                   power=power)
+
+    mask_v = librosa.util.softmask(S_full - S_filter,
+                                   margin_v * S_filter,
+                                   power=power)
+
+    # Once we have the masks, simply multiply them with the input spectrum
+    # to separate the components
+
+    S_foreground = mask_v * S_full
+    S_background = mask_i * S_full
+
+    y_foreground = librosa.istft(S_foreground * phase)
+    y_background = librosa.istft(S_background * phase)
+
+    return y_foreground, y_background
+
 def load_audio(filename):
     x, fs = librosa.load(filename)
     return x, fs
@@ -48,7 +108,29 @@ def onset_paddings(onset_times, onset_durations, tempo, abs_x, precisions=1.0, s
         i += 1
     return onset_times, onset_durations
 
+
 def onset_detection(x, fs, fft_length=1024, fft_hop_length=512):
+    x_foreground, x_background = vocal_separation(x, fs)
+    x = x_foreground
+    for x, fs in zip([x_foreground], [fs]):
+
+        y = abs(librosa.stft(x, n_fft=fft_length, hop_length=fft_hop_length, center=False))
+        onset_env = librosa.onset.onset_strength(y=x, sr=fs)
+        tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=fs)
+        print('tempo:', tempo)
+
+        onset_frames = librosa.onset.onset_detect(onset_envelope=onset_env, sr=fs)
+        # using onset_detect from librosa to detect onsets (using parameters delta=0.04, wait=4)
+        onset_times = librosa.frames_to_time(onset_frames, sr=fs)
+        onset_samples = librosa.frames_to_samples(onset_frames)
+        onset_durations = onset_length_detection(x, y, onset_samples, sr=fs)
+
+        onset_times, onset_durations = onset_roundings(onset_times, onset_durations, tempo)
+        onset_times, onset_durations = onset_paddings(onset_times, onset_durations, tempo, np.abs(x), sr=fs)
+    return onset_times, onset_durations
+
+
+def onset_detection_back(x, fs, fft_length=1024, fft_hop_length=512):
     y = abs(librosa.stft(x, n_fft=fft_length, hop_length=fft_hop_length, center=False))
     onset_env = librosa.onset.onset_strength(y=x, sr=fs)
     tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=fs)
@@ -66,7 +148,7 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512):
 
 
 # detect length of each onsets
-def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=512, sr=22050, tolerance=3):
+def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=512, sr=22050, tolerance=6):
     residual_size = fft_length - fft_hop_length
     filtered_onset_samples = onset_samples
     filtered_onset_samples[onset_samples < fft_length] = fft_length - residual_size
@@ -109,7 +191,7 @@ def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=
 
         # compute distribution difference
         # satisfaction = np.logical_and(satisfaction, diff > 0.5)
-        satisfaction = np.logical_and(satisfaction, diff < 1.2)
+        satisfaction = np.logical_and(satisfaction, diff < 2.4)
 
 
         # check change in max frequency peak
