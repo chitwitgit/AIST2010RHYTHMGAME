@@ -9,15 +9,15 @@ import os
 
 class GameScene:
     def __init__(self):
-        self.screen_width = 360
-        self.screen_height = 640
+        self.screen_width = 800
+        self.screen_height = 450
 
         self.window = None
         self.clock = None
         self.steps = 0
         self.real_time_steps = 0
         self.fps = 60
-        self.seed = 777777778
+        self.seed = 777
         self.points = 0
         self.currentScene = 0
 
@@ -36,26 +36,27 @@ class GameScene:
         is_from_youtube = not os.path.exists(filename)
         if is_from_youtube:
             # youtube_url = "https://www.youtube.com/watch?v=yXMPAMKUVgY"
-            youtube_url = "https://www.youtube.com/watch?v=tbK7JxFDOOg"
+            # youtube_url = "https://www.youtube.com/watch?v=tbK7JxFDOOg"
+            youtube_url = "https://www.youtube.com/watch?v=2c_lHmkOq0E"
+            # youtube_url = "https://www.youtube.com/watch?v=HMGetv40FkI"
             # youtube_url = "https://www.youtube.com/watch?v=FYAIgqIpR08"
             download_youtube_audio(youtube_url, output_path, output_name)
         else:
             print("File already exists. Skipping download.")
-
+        music_data = notedetection.process_audio(filename)
         if self.window is None:
             pygame.init()
             pygame.display.init()
             self.window = pygame.display.set_mode((self.screen_width, self.screen_height))
             mixer.music.load(filename)
             mixer.music.set_volume(0.8)
+        if is_from_youtube:
+            os.remove(filename)
         if self.clock is None:
             self.clock = pygame.time.Clock()
         pygame.mouse.set_visible(False)  # hides the cursor and will draw a better cursor
         win = pygame.Surface((self.screen_width, self.screen_height))
         win.fill((0, 0, 0))
-        music_data = notedetection.process_audio(filename)
-        if is_from_youtube:
-            os.remove(filename)
         self.cursor_img = pygame.image.load('data/images/cursor.png').convert_alpha()
         self.cursor_img_rect = self.cursor_img.get_rect()
         self.cursor_pressed_img = pygame.image.load('data/images/cursor_pressed.png').convert_alpha()
@@ -109,8 +110,8 @@ class GameScene:
 
         self.sync_game_and_music()
         win = pygame.Surface((self.screen_width, self.screen_height))
-        win.blit(self.background, (0, 0))
-        # win.fill((0, 0, 0))  # Fill the surface with black color
+        # win.blit(self.background, (0, 0))
+        win.fill((0, 0, 0))  # Fill the surface with black color
         # rendering objects
         self.pattern_manager.render_patterns(win, self.steps)
         if pygame.mouse.get_pressed()[0]:
