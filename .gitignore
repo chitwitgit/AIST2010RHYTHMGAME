@@ -9,6 +9,12 @@ __pycache__/
 # C extensions
 *.so
 
+# IDE settings
+.idea/
+
+# Profiler outputs
+*.prof
+
 # Distribution / packaging
 .Python
 build/

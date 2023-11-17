@@ -4,6 +4,7 @@ from pattern_manager import PatternManager
 from pygame import mixer
 from utils import notedetection
 from utils.youtubeDL import download_youtube_audio
+from utils.input_manager import InputManager
 import os
 
 
@@ -24,33 +25,21 @@ class GameScene:
         self.pattern_manager = PatternManager(self.screen_width, self.screen_height, self.fps, self.seed, difficulty=1)
         self.background = None
         self.game_started = False
-        self.previous_mouse_clicked = False
 
     def _init(self, seed=None):
         random.seed(seed)
         output_path = os.path.join("data", "audio")
-        output_name = "jjk2.mp3"
-        # output_name = "akari2.mp3"
+        # output_name = "furina.mp3"
+        output_name = "akari2.mp3"
 
         filename = os.path.join(output_path, output_name)
         is_from_youtube = not os.path.exists(filename)
         if is_from_youtube:
             # youtube_url = "https://www.youtube.com/watch?v=yXMPAMKUVgY"
             # youtube_url = "https://www.youtube.com/watch?v=tbK7JxFDOOg"
-            # youtube_url = "https://www.youtube.com/watch?v=2c_lHmkOq0E"
-
+            youtube_url = "https://www.youtube.com/watch?v=i0K40f-6mLs"
             # youtube_url = "https://www.youtube.com/watch?v=HMGetv40FkI"
             # youtube_url = "https://www.youtube.com/watch?v=FYAIgqIpR08"
-
-            # youtube_url = "https://www.youtube.com/watch?v=i0K40f-6mLs&list=RDi0K40f-6mLs&start_radio=1"
-            # youtube_url = "https://www.youtube.com/watch?v=TpvDAJgznMo"
-            # youtube_url = "https://www.youtube.com/watch?v=yysMNz2s5Lw&list=RDyysMNz2s5Lw&start_radio=1"
-            # youtube_url = "https://www.youtube.com/watch?v=hjQVOEWehBU"
-            # youtube_url = "https://www.youtube.com/watch?v=9aJVr5tTTWk"
-            # youtube_url = "https://www.youtube.com/watch?v=M6gcoDN9jBc"
-            # youtube_url = "https://www.youtube.com/watch?v=zuoVd2QNxJo"
-            youtube_url = "https://www.youtube.com/watch?v=1tk1pqwrOys"
-
             download_youtube_audio(youtube_url, output_path, output_name)
         else:
             print("File already exists. Skipping download.")
@@ -58,14 +47,16 @@ class GameScene:
         if self.window is None:
             pygame.init()
             pygame.display.init()
-            self.window = pygame.display.set_mode((self.screen_width, self.screen_height))
+            self.window = pygame.display.set_mode((self.screen_width, self.screen_height),
+                                                  pygame.HWSURFACE | pygame.DOUBLEBUF)
             mixer.music.load(filename)
             mixer.music.set_volume(0.8)
         if is_from_youtube:
             os.remove(filename)
         if self.clock is None:
             self.clock = pygame.time.Clock()
-        pygame.mouse.set_visible(False)  # hides the cursor and will draw a better cursor
+        self.input_manager = InputManager()
+        pygame.mouse.set_visible(False)  # hides the cursor and will draw a cursor for playing rhythm game
         win = pygame.Surface((self.screen_width, self.screen_height))
         win.fill((0, 0, 0))
         self.cursor_img = pygame.image.load('data/images/cursor.png').convert_alpha()
@@ -97,16 +88,15 @@ class GameScene:
             self.render()
         self.close()
 
-    def reset(self, seed=None, options=None):
+    def restart(self, seed=None, options=None):
         random.seed(seed)
         return
 
     def step(self, action=None):
         if self.game_started:
+            self.input_manager.update()
             self.steps += 1
-            self.pattern_manager.update_patterns(self.steps, self.previous_mouse_clicked)
-            self.previous_mouse_clicked = pygame.mouse.get_pressed()[0]
-
+            self.pattern_manager.update_patterns(self.steps, self.input_manager)
 
     def render(self):
         fps = self.clock.get_fps()
@@ -125,7 +115,7 @@ class GameScene:
         win.fill((0, 0, 0))  # Fill the surface with black color
         # rendering objects
         self.pattern_manager.render_patterns(win, self.steps)
-        if pygame.mouse.get_pressed()[0]:
+        if self.input_manager.is_user_holding:
             self.cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
             win.blit(self.cursor_pressed_img, self.cursor_pressed_img_rect)  # draw the cursor
         else:

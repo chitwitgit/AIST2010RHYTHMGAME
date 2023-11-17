@@ -31,11 +31,6 @@ def draw_approach_circle(win, point, relative_time_difference, thickness, stroke
     approach_constant = 1 / approach_rate
     if abs(relative_time_difference) >= approach_constant:
         return
-    width, height = win.get_size()
-    ss_factor = 1  # Increase this value for higher quality antialiasing
-    sup_width = width * ss_factor
-    sup_height = height * ss_factor
-    sup_surface = pygame.Surface((sup_width, sup_height), pygame.SRCALPHA)
     scaling_factor = 1 - 3.5 * relative_time_difference
     alpha = (
         255 - 255 * 1 / approach_constant ** 2 * relative_time_difference ** 2
@@ -44,32 +39,21 @@ def draw_approach_circle(win, point, relative_time_difference, thickness, stroke
     )
     alpha = min(max(alpha, 0), 255)
     circle = circle_surface((255, 255, 255, alpha), (0, 0, 0, 0),
-                            thickness * ss_factor, stroke_width * ss_factor, scaling_factor)
-    rect = circle.get_rect(center=point * ss_factor)
-    sup_surface.blit(circle, rect)
-    downsampled_surface = pygame.transform.smoothscale(sup_surface, (width, height))
-    # Draw the downsampled surface onto the window
-    win.blit(downsampled_surface, (0, 0))
+                            thickness, stroke_width, scaling_factor)
+    rect = circle.get_rect(center=point)
+    win.blit(circle, rect)
 
 
 def draw_clicked_circle(win, point, relative_time_difference, thickness, stroke_width):
     if abs(relative_time_difference) >= 0.3:
         return
-    width, height = win.get_size()
-    ss_factor = 1  # Increase this value for higher quality antialiasing
-    sup_width = width * ss_factor
-    sup_height = height * ss_factor
-    sup_surface = pygame.Surface((sup_width, sup_height), pygame.SRCALPHA)
     scaling_factor = np.cbrt(1 + 8 * relative_time_difference)
     alpha = 255 - 255 * 1 / np.cbrt(0.3) * np.cbrt(relative_time_difference)
     alpha = min(max(alpha, 0), 255)
     circle = circle_surface((255, 255, 255, alpha), (0, 0, 0, 0),
-                            thickness * ss_factor, stroke_width * ss_factor, scaling_factor)
-    rect = circle.get_rect(center=point * ss_factor)
-    sup_surface.blit(circle, rect)
-    downsampled_surface = pygame.transform.smoothscale(sup_surface, (width, height))
-    # Draw the downsampled surface onto the window
-    win.blit(downsampled_surface, (0, 0))
+                            thickness, stroke_width, scaling_factor)
+    rect = circle.get_rect(center=point)
+    win.blit(circle, rect)
 
 
 class TapPattern:
@@ -110,22 +94,23 @@ class TapPattern:
 
         self._prerendered_frame = downsampled_surface
 
-    def update(self, t, mouse_previous_state):
-        self.check_mouse(t, mouse_previous_state)
+    def update(self, t, input_manager):
+        self.check_mouse(t, input_manager)
 
-    def check_mouse(self, t, mouse_previous_state):
+    def check_mouse(self, t, input_manager):
         if self.pressed:
-            return
+            return False
         time_difference = t - self.t
         relative_time_difference = time_difference / self.lifetime
         if -0.4 < relative_time_difference < 0.2:  # allow for early clicks but don't register clicks that are too late
             # Get the current mouse position
-            mouse_pos = pygame.mouse.get_pos()
+            mouse_pos = input_manager.mouse_pos
             is_inside_circle = np.linalg.norm(np.asarray(mouse_pos) - self.point) < self.thickness
-            left_click_pressed = pygame.mouse.get_pressed()[0]
-            if is_inside_circle and left_click_pressed and not mouse_previous_state:  # inside the circle and is clicking
+            if is_inside_circle and input_manager.is_user_inputted:  # inside the circle and is new input
                 self.pressed = True
                 self.press_time = t
+                return True
+        return False
 
     def render(self, win, t):
         if self.pressed:
@@ -186,22 +171,23 @@ class SliderPattern(ABC):
     def _compute_vertices(self, width):
         pass
 
-    def update(self, t, mouse_previous_state):
-        self.check_mouse(t, mouse_previous_state)
+    def update(self, t, input_manager):
+        self.check_mouse(t, input_manager)
 
-    def check_mouse(self, t, mouse_previous_state):
+    def check_mouse(self, t, input_manager):
         if self.pressed:
-            return
+            return False
         time_difference = t - self.starting_t
         relative_time_difference = time_difference / self.lifetime
         if abs(relative_time_difference) < 0.3:
             # Get the current mouse position
-            mouse_pos = pygame.mouse.get_pos()
+            mouse_pos = input_manager.mouse_pos
             is_inside_circle = np.linalg.norm(np.asarray(mouse_pos) - self.starting_point) < self.thickness
-            left_click_pressed = pygame.mouse.get_pressed()[0]
-            if is_inside_circle and left_click_pressed and not mouse_previous_state:  # inside the circle and is clicking
+            if is_inside_circle and input_manager.is_user_inputted:  # inside the circle and is clicking
                 self.pressed = True
                 self.press_time = t
+                return True
+        return False
 
     def prerender(self, win):
         # Create a surface with higher resolution for supersampling
@@ -261,10 +247,11 @@ class SliderPattern(ABC):
         return False
 
     def render_based_on_time(self, win, t):
-        if t <= self.starting_t:
-            self.draw_tracing_circle(win, t, hollow=True)
-        if self.starting_t <= t <= self.ending_t:
-            self.draw_tracing_circle(win, t, hollow=False)
+        if t <= self.ending_t:
+            if self.pressed:
+                self.draw_tracing_circle(win, t, hollow=False)
+            else:
+                self.draw_tracing_circle(win, t, hollow=True)
 
         if not self.pressed:
             time_difference = t - self.starting_t
@@ -280,36 +267,21 @@ class SliderPattern(ABC):
         return abs(relative_time_difference) > 0.6
 
     def draw_tracing_circle(self, win, t, hollow=False):
-        width, height = win.get_size()
-        ss_factor = 2  # Increase this value for higher quality antialiasing
-        sup_width = width * ss_factor
-        sup_height = height * ss_factor
-        sup_surface = pygame.Surface((sup_width, sup_height), pygame.SRCALPHA)
         total_time = self.ending_t - self.starting_t
         p = (t - self.starting_t) / total_time
         p = max(0, min(p, 1))  # clamp
-        pos = self._compute_coordinate(p) * ss_factor
+        pos = self._compute_coordinate(p)
         pos = pos.flatten()
-
-        """pygame.draw.circle(sup_surface, (255, 255, 255, 150),
-                           (x, y), (self.thickness + 2 * self.stroke_width) * ss_factor)
-
-        pygame.draw.circle(sup_surface, (0, 0, 0, 0),
-                           (x, y), (self.thickness + self.stroke_width) * ss_factor)"""
 
         center_color = (0, 0, 0, 0) if hollow else (255, 255, 255, 150)
         circle = circle_surface((255, 255, 255, 255), center_color,
-                                self.thickness * ss_factor, self.stroke_width * ss_factor, 1)
+                                self.thickness, self.stroke_width, 1)
 
         # to prevent some weird runtime errors formed by weird floating point ops
         pos = np.clip(pos, -2147483648, 2147483647)
 
         rect = circle.get_rect(center=pos)
-        sup_surface.blit(circle, rect)
-
-        downsampled_surface = pygame.transform.smoothscale(sup_surface, (width, height))
-        # Draw the downsampled surface onto the window
-        win.blit(downsampled_surface, (0, 0))
+        win.blit(circle, rect)
 
 
 class Line(SliderPattern):

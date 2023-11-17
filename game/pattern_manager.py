@@ -131,9 +131,9 @@ class PatternManager:
         for pattern in self.patterns:
             pattern.prerender(win)
 
-    def update_patterns(self, t, mouse_previous_state):
+    def update_patterns(self, t, input_manager):
         for pattern in self.pattern_queue:
-            pattern.update(t, mouse_previous_state)
+            pattern.update(t, input_manager)
 
     def render_patterns(self, win, t):
         for pattern in self.pattern_queue:
