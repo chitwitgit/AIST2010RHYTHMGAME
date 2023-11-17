@@ -51,8 +51,8 @@ def draw_clicked_circle(win, point, relative_time_difference, thickness, stroke_
     alpha = 255 - 255 * 1 / np.cbrt(0.3) * np.cbrt(relative_time_difference)
     alpha = min(max(alpha, 0), 255)
     circle = circle_surface((255, 255, 255, alpha), (0, 0, 0, 0),
-                            thickness * ss_factor, stroke_width * ss_factor, scaling_factor)
-    rect = circle.get_rect(center=point * ss_factor)
+                            thickness, stroke_width, scaling_factor)
+    rect = circle.get_rect(center=point)
     win.blit(circle, rect)
 
 
@@ -94,22 +94,23 @@ class TapPattern:
 
         self._prerendered_frame = downsampled_surface
 
-    def update(self, t, mouse_previous_state):
-        self.check_mouse(t, mouse_previous_state)
+    def update(self, t, input_manager):
+        self.check_mouse(t, input_manager)
 
-    def check_mouse(self, t, mouse_previous_state):
+    def check_mouse(self, t, input_manager):
         if self.pressed:
-            return
+            return False
         time_difference = t - self.t
         relative_time_difference = time_difference / self.lifetime
         if -0.4 < relative_time_difference < 0.2:  # allow for early clicks but don't register clicks that are too late
             # Get the current mouse position
-            mouse_pos = pygame.mouse.get_pos()
+            mouse_pos = input_manager.mouse_pos
             is_inside_circle = np.linalg.norm(np.asarray(mouse_pos) - self.point) < self.thickness
-            left_click_pressed = pygame.mouse.get_pressed()[0]
-            if is_inside_circle and left_click_pressed and not mouse_previous_state:  # inside the circle and is clicking
+            if is_inside_circle and input_manager.is_user_inputted:  # inside the circle and is new input
                 self.pressed = True
                 self.press_time = t
+                return True
+        return False
 
     def render(self, win, t):
         if self.pressed:
@@ -170,22 +171,23 @@ class SliderPattern(ABC):
     def _compute_vertices(self, width):
         pass
 
-    def update(self, t, mouse_previous_state):
-        self.check_mouse(t, mouse_previous_state)
+    def update(self, t, input_manager):
+        self.check_mouse(t, input_manager)
 
-    def check_mouse(self, t, mouse_previous_state):
+    def check_mouse(self, t, input_manager):
         if self.pressed:
-            return
+            return False
         time_difference = t - self.starting_t
         relative_time_difference = time_difference / self.lifetime
         if abs(relative_time_difference) < 0.3:
             # Get the current mouse position
-            mouse_pos = pygame.mouse.get_pos()
+            mouse_pos = input_manager.mouse_pos
             is_inside_circle = np.linalg.norm(np.asarray(mouse_pos) - self.starting_point) < self.thickness
-            left_click_pressed = pygame.mouse.get_pressed()[0]
-            if is_inside_circle and left_click_pressed and not mouse_previous_state:  # inside the circle and is clicking
+            if is_inside_circle and input_manager.is_user_inputted:  # inside the circle and is clicking
                 self.pressed = True
                 self.press_time = t
+                return True
+        return False
 
     def prerender(self, win):
         # Create a surface with higher resolution for supersampling
