@@ -43,7 +43,8 @@ def vocal_separation(y, sr):
 
     # We can also use a margin to reduce bleed between the vocals and instrumentation masks.
     # Note: the margins need not be equal for foreground and background separation
-    margin_i, margin_v = 7, 20
+    # adjust 1
+    margin_i, margin_v = 2, 10
     power = 3
 
     mask_i = librosa.util.softmask(S_filter,
@@ -125,6 +126,7 @@ def onset_paddings(onset_times, onset_durations, tempo, abs_x, precisions=1.0, s
 
 def onset_detection(x, fs, fft_length=1024, fft_hop_length=512):
     x_foreground, x_background = vocal_separation(x, fs)
+    # adjust 2
     for x, fs in zip([x_foreground], [fs]):
 
         y = abs(librosa.stft(x, n_fft=fft_length, hop_length=fft_hop_length, center=False))
@@ -206,7 +208,7 @@ def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=
         satisfaction = np.logical_and(satisfaction, diff < 5.0)
 
         # check change in max frequency peak
-        satisfaction = np.logical_and(satisfaction, np.abs(new_peaks - old_peaks) <= tolerance)
+        # satisfaction = np.logical_and(satisfaction, np.abs(new_peaks - old_peaks) <= tolerance)
 
         # use max frequency amplitude
         # satisfaction = np.logical_and(satisfaction, new_amplitude >= old_amplitude / 2)
