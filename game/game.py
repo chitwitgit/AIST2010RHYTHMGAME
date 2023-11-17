@@ -29,7 +29,7 @@ class GameScene:
     def _init(self, seed=None):
         random.seed(seed)
         output_path = os.path.join("data", "audio")
-        output_name = "akari3.mp3"
+        output_name = "aoi2.mp3"
         # output_name = "akari2.mp3"
 
         filename = os.path.join(output_path, output_name)
@@ -37,9 +37,15 @@ class GameScene:
         if is_from_youtube:
             # youtube_url = "https://www.youtube.com/watch?v=yXMPAMKUVgY"
             # youtube_url = "https://www.youtube.com/watch?v=tbK7JxFDOOg"
-            youtube_url = "https://www.youtube.com/watch?v=2c_lHmkOq0E"
+            # youtube_url = "https://www.youtube.com/watch?v=2c_lHmkOq0E"
+
             # youtube_url = "https://www.youtube.com/watch?v=HMGetv40FkI"
             # youtube_url = "https://www.youtube.com/watch?v=FYAIgqIpR08"
+
+            # youtube_url = "https://www.youtube.com/watch?v=i0K40f-6mLs&list=RDi0K40f-6mLs&start_radio=1"
+            # youtube_url = "https://www.youtube.com/watch?v=TpvDAJgznMo"
+            youtube_url = "https://www.youtube.com/watch?v=yysMNz2s5Lw&list=RDyysMNz2s5Lw&start_radio=1"
+            youtube_url = "https://www.youtube.com/watch?v=hjQVOEWehBU"
             download_youtube_audio(youtube_url, output_path, output_name)
         else:
             print("File already exists. Skipping download.")
