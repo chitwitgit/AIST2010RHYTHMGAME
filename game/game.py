@@ -29,23 +29,17 @@ class GameScene:
     def _init(self, seed=None):
         random.seed(seed)
         output_path = os.path.join("data", "audio")
-        output_name = "aoi2.mp3"
-        # output_name = "akari2.mp3"
+        # output_name = "furina.mp3"
+        output_name = "akari2.mp3"
 
         filename = os.path.join(output_path, output_name)
         is_from_youtube = not os.path.exists(filename)
         if is_from_youtube:
             # youtube_url = "https://www.youtube.com/watch?v=yXMPAMKUVgY"
             # youtube_url = "https://www.youtube.com/watch?v=tbK7JxFDOOg"
-            # youtube_url = "https://www.youtube.com/watch?v=2c_lHmkOq0E"
-
+            youtube_url = "https://www.youtube.com/watch?v=i0K40f-6mLs"
             # youtube_url = "https://www.youtube.com/watch?v=HMGetv40FkI"
             # youtube_url = "https://www.youtube.com/watch?v=FYAIgqIpR08"
-
-            # youtube_url = "https://www.youtube.com/watch?v=i0K40f-6mLs&list=RDi0K40f-6mLs&start_radio=1"
-            # youtube_url = "https://www.youtube.com/watch?v=TpvDAJgznMo"
-            youtube_url = "https://www.youtube.com/watch?v=yysMNz2s5Lw&list=RDyysMNz2s5Lw&start_radio=1"
-            youtube_url = "https://www.youtube.com/watch?v=hjQVOEWehBU"
             download_youtube_audio(youtube_url, output_path, output_name)
         else:
             print("File already exists. Skipping download.")
@@ -53,7 +47,7 @@ class GameScene:
         if self.window is None:
             pygame.init()
             pygame.display.init()
-            self.window = pygame.display.set_mode((self.screen_width, self.screen_height))
+            self.window = pygame.display.set_mode((self.screen_width, self.screen_height), pygame.HWSURFACE | pygame.DOUBLEBUF)
             mixer.music.load(filename)
             mixer.music.set_volume(0.8)
         if is_from_youtube:
@@ -92,7 +86,7 @@ class GameScene:
             self.render()
         self.close()
 
-    def reset(self, seed=None, options=None):
+    def restart(self, seed=None, options=None):
         random.seed(seed)
         return
 
