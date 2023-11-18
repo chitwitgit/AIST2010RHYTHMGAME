@@ -30,7 +30,7 @@ def merge_vocal_background_with_padding(vocal_onset, vocal_duration, background_
         merge_label.append(label)
 
         k += 1
-        if k > 1 and merge_label[-2] == 1 and merge_label[-1] == 1:
+        if False and k > 1 and merge_label[-2] == 1 and merge_label[-1] == 1:
             count = 0
             blank_start = merge_onset[-2] + merge_duration[-2]
             while merge_onset[-1] - blank_start - count * spb >= spb:
@@ -94,7 +94,9 @@ def vocal_separation(y, sr):
     # We can also use a margin to reduce bleed between the vocals and instrumentation masks.
     # Note: the margins need not be equal for foreground and background separation
     # adjust 1
-    margin_i, margin_v = 2, 10
+    # noisy: 2, 10
+    # clean: 10, 28
+    margin_i, margin_v = 10, 20
     power = 3
 
     mask_i = librosa.util.softmask(S_filter,
@@ -191,14 +193,16 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512):
         onset_times = librosa.frames_to_time(onset_frames, sr=fs)
         onset_samples = librosa.frames_to_samples(onset_frames)
         onset_durations = onset_length_detection(x, y, onset_samples, sr=fs)
-
+        print('before:', np.max(onset_durations))
         onset_times, onset_durations = onset_roundings(onset_times, onset_durations, tempo)
         # onset_times, onset_durations = onset_paddings(onset_times, onset_durations, tempo, np.abs(x), sr=fs)
 
         onset_list.append(onset_times)
         duration_list.append(onset_durations)
 
-    onset_times, onset_durations, onset_labels = merge_vocal_background_with_padding(onset_list[0], duration_list[0], onset_list[1], duration_list[1], tempo)
+    # onset_times, onset_durations, onset_labels = merge_vocal_background_with_padding(onset_list[0], duration_list[0], onset_list[1], duration_list[1], tempo)
+    onset_times, onset_durations = onset_list[0], duration_list[0]
+    print('after:', np.max(onset_durations))
     return onset_times, onset_durations
 
 
@@ -219,7 +223,7 @@ def onset_detection_back(x, fs, fft_length=1024, fft_hop_length=512):
 
 
 # detect length of each onsets
-def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=512, sr=22050, tolerance=7):
+def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=512, sr=22050, tolerance=1):
     residual_size = fft_length - fft_hop_length
     filtered_onset_samples = onset_samples
     filtered_onset_samples[onset_samples < fft_length] = fft_length - residual_size
@@ -262,7 +266,8 @@ def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=
 
         # compute distribution difference
         # satisfaction = np.logical_and(satisfaction, diff > 0.5)
-        satisfaction = np.logical_and(satisfaction, diff < 5.0)
+        # print(np.min(diff))
+        satisfaction = np.logical_and(satisfaction, diff < 1e-3)
 
         # check change in max frequency peak
         # satisfaction = np.logical_and(satisfaction, np.abs(new_peaks - old_peaks) <= tolerance)
@@ -289,7 +294,10 @@ def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=
 
         temp_indices[~satisfaction] = number_of_frames - 1
         temp_onset_samples[~satisfaction] = 0
-    return length_sum * residual_size / sr
+
+    durations = length_sum * residual_size / sr
+    print('max durations:', np.max(durations))
+    return durations
 
 
 def process_audio(filename):
