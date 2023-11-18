@@ -2,6 +2,56 @@ import numpy as np
 import librosa
 import time
 
+
+def merge_vocal_background_with_padding(vocal_onset, vocal_duration, background_onset, background_duration, tempo, precision=1.0):
+    spb = 60 / tempo * precision
+    merge_onset = []
+    merge_duration = []
+    merge_label = []
+
+    l1 = vocal_onset.shape[0]
+    l2 = background_onset.shape[0]
+    i = j = k = 0
+
+    while i < l1 and j < l2:
+        if vocal_onset[i] <= background_onset[j]:
+            chosen_onset = vocal_onset[i]
+            chosen_duration = vocal_duration[i]
+            label = 1
+            i += 1
+        else:
+            chosen_onset = background_onset[j]
+            chosen_duration = background_duration[j]
+            label = 0
+            j += 1
+
+        merge_onset.append(chosen_onset)
+        merge_duration.append(chosen_duration)
+        merge_label.append(label)
+
+        k += 1
+        if k > 1 and merge_label[-2] == 1 and merge_label[-1] == 1:
+            count = 0
+            blank_start = merge_onset[-2] + merge_duration[-2]
+            while merge_onset[-1] - blank_start - count * spb >= spb:
+                merge_onset.append(blank_start + count * spb)
+                count += 1
+                k += 1
+
+    while i < l1:
+        merge_onset.append(vocal_onset[i])
+        merge_duration.append(vocal_duration[i])
+        merge_label.append(1)
+        i += 1
+
+    while j < l2:
+        merge_onset.append(background_onset[j])
+        merge_duration.append(background_duration[j])
+        merge_label.append(0)
+        j += 1
+
+    return merge_onset, merge_duration, merge_label
+
 def vocal_separation(y, sr):
     pre_time = time.time()
     # And compute the spectrogram magnitude and phase
@@ -43,7 +93,8 @@ def vocal_separation(y, sr):
 
     # We can also use a margin to reduce bleed between the vocals and instrumentation masks.
     # Note: the margins need not be equal for foreground and background separation
-    margin_i, margin_v = 7, 20
+    # adjust 1
+    margin_i, margin_v = 2, 10
     power = 3
 
     mask_i = librosa.util.softmask(S_filter,
@@ -125,7 +176,10 @@ def onset_paddings(onset_times, onset_durations, tempo, abs_x, precisions=1.0, s
 
 def onset_detection(x, fs, fft_length=1024, fft_hop_length=512):
     x_foreground, x_background = vocal_separation(x, fs)
-    for x, fs in zip([x_foreground], [fs]):
+    onset_list = []
+    duration_list = []
+    # adjust 2
+    for x, fs in zip([x_foreground, x_background], [fs, fs]):
 
         y = abs(librosa.stft(x, n_fft=fft_length, hop_length=fft_hop_length, center=False))
         onset_env = librosa.onset.onset_strength(y=x, sr=fs)
@@ -140,6 +194,11 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512):
 
         onset_times, onset_durations = onset_roundings(onset_times, onset_durations, tempo)
         # onset_times, onset_durations = onset_paddings(onset_times, onset_durations, tempo, np.abs(x), sr=fs)
+
+        onset_list.append(onset_times)
+        duration_list.append(onset_durations)
+
+    onset_times, onset_durations, onset_labels = merge_vocal_background_with_padding(onset_list[0], duration_list[0], onset_list[1], duration_list[1], tempo)
     return onset_times, onset_durations
 
 
@@ -206,7 +265,7 @@ def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=
         satisfaction = np.logical_and(satisfaction, diff < 5.0)
 
         # check change in max frequency peak
-        satisfaction = np.logical_and(satisfaction, np.abs(new_peaks - old_peaks) <= tolerance)
+        # satisfaction = np.logical_and(satisfaction, np.abs(new_peaks - old_peaks) <= tolerance)
 
         # use max frequency amplitude
         # satisfaction = np.logical_and(satisfaction, new_amplitude >= old_amplitude / 2)
