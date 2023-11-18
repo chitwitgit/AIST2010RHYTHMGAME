@@ -9,73 +9,141 @@ from utils.input_manager import InputManager
 import os
 
 
-class GameScene:
+class Game:
     def __init__(self):
+        self.game_scene = None
+        self.pause_scene = None
+        self.current_scene = None
+        self.screen_width = 800
+        self.screen_height = 450
+        pygame.init()
+        pygame.display.init()
+        self.window = pygame.display.set_mode((self.screen_width, self.screen_height),
+                                              pygame.HWSURFACE | pygame.DOUBLEBUF)
+
+        self.game_scene = GameScene(self.window)
+        self.pause_scene = PauseScene(self.window)
+        self.current_scene = self.game_scene
+
+    def run(self, seed=None):
+        running = True
+        while running:
+            state = self.current_scene.run(seed)
+            if state == "Pause":
+                self.pause_game()
+            if state == "Resume":
+                self.resume_game()
+            if state == "End":
+                self.close()
+                running = False
+
+    def pause_game(self):
+        self.current_scene = self.pause_scene
+        self.pause_scene.resume_selected = False
+
+    def resume_game(self):
+        self.current_scene = self.game_scene
+
+    def close(self):
+        if self.window is not None:
+            pygame.display.quit()
+            pygame.quit()
+
+
+class GameScene:
+    def __init__(self, window):
         self.screen_width = 800
         self.screen_height = 450
 
-        self.window = None
+        self.window = window
         self.clock = None
         self.steps = 0
         self.real_time_steps = 0
         self.fps = 60
         self.seed = 777
         self.points = 0
-        self.currentScene = 0
+        self.audio_file_full_path = None
+        self.pattern_manager = None
         self.mode = "debug"
         self.debug_colors = None
         self.click_sound_effect = None
-
-        self.pattern_manager = PatternManager(self.screen_width, self.screen_height, self.fps, self.seed, difficulty=1)
+        self.music_data = None
         self.background = None
         self.game_started = False
+        self.paused = False
 
-    def _init(self, seed=None):
-        random.seed(seed)
-        output_path = os.path.join("data", "audio")
-        # output_name = "furina.mp3"
-        output_name = "akari2.mp3"
+        self.input_manager = InputManager()
+        self.pattern_manager = PatternManager(self.screen_width, self.screen_height, self.fps, self.seed, difficulty=1)
 
-        filename = os.path.join(output_path, output_name)
-        is_from_youtube = not os.path.exists(filename)
-        if is_from_youtube:
-            # youtube_url = "https://www.youtube.com/watch?v=yXMPAMKUVgY"
-            # youtube_url = "https://www.youtube.com/watch?v=tbK7JxFDOOg"
-            # youtube_url = "https://www.youtube.com/watch?v=i0K40f-6mLs"
-            # youtube_url = "https://www.youtube.com/watch?v=GyP1EWjS2rM"
-            youtube_url = "https://www.youtube.com/watch?v=kagoEGKHZvU"
-            # youtube_url = "https://www.youtube.com/watch?v=HMGetv40FkI"
-            # youtube_url = "https://www.youtube.com/watch?v=FYAIgqIpR08"
-            download_youtube_audio(youtube_url, output_path, output_name)
-        else:
-            print("File already exists. Skipping download.")
-        self.music_data = notedetection.process_audio(filename)
-        if self.window is None:
-            pygame.init()
-            pygame.display.init()
-            self.window = pygame.display.set_mode((self.screen_width, self.screen_height),
-                                                  pygame.HWSURFACE | pygame.DOUBLEBUF)
-            mixer.music.load(filename)
-            mixer.music.set_volume(0.8)
-        if is_from_youtube:
-            os.remove(filename)
+        self.initialize()
+
+    def initialize(self):
+        random.seed(self.seed)
+        self.load_assets(keep_files=True)
+
         if self.clock is None:
             self.clock = pygame.time.Clock()
-        self.input_manager = InputManager()
         pygame.mouse.set_visible(False)  # hides the cursor and will draw a cursor for playing rhythm game
         win = pygame.Surface((self.screen_width, self.screen_height))
         win.fill((0, 0, 0))
+        self.pattern_manager.generate_map(self.music_data)
+        self.pattern_manager.prerender_patterns(win)
+        if self.mode == "debug":
+            self.debug_mode_setup()
+
+    def load_assets(self, keep_files=False, use_new_files=False):
+        file_path = os.path.join("data", "audio")
+        file_name = "audio.mp3"
+        self.audio_file_full_path = os.path.join(file_path, file_name)
+        onset_times_file = os.path.join("data", "onset_times.npy")
+        onset_durations_file = os.path.join("data", "onset_durations.npy")
+
+        if use_new_files:
+            if os.path.exists(self.audio_file_full_path):
+                os.remove(self.audio_file_full_path)
+
+            if os.path.exists(onset_times_file):
+                os.remove(onset_times_file)
+
+            if os.path.exists(onset_durations_file):
+                os.remove(onset_durations_file)
+
+        is_from_youtube = not os.path.exists(self.audio_file_full_path)
+        if is_from_youtube:
+            youtube_url = "https://www.youtube.com/watch?v=kagoEGKHZvU"
+            download_youtube_audio(youtube_url, file_path, file_name)
+        else:
+            print("File already exists. Skipping download.")
         self.cursor_img = pygame.image.load('data/images/cursor.png').convert_alpha()
         self.cursor_img_rect = self.cursor_img.get_rect()
         self.cursor_pressed_img = pygame.image.load('data/images/cursor_pressed.png').convert_alpha()
         self.cursor_pressed_img_rect = self.cursor_pressed_img.get_rect()
-        self.pattern_manager.generate_map(self.music_data)
-        self.pattern_manager.prerender_patterns(win)
         if self.background is None:
             background = pygame.image.load("data/images/furina.jpg").convert()
             self.background = pygame.transform.smoothscale(background, (self.screen_width, self.screen_height))
-        if self.mode == "debug":
-            self.debug_mode_setup()
+
+        if os.path.exists(onset_times_file) and os.path.exists(onset_durations_file):
+            onset_times = np.load(onset_times_file)
+            onset_durations = np.load(onset_durations_file)
+            self.music_data = onset_times, onset_durations
+        else:
+            self.music_data = notedetection.process_audio(self.audio_file_full_path)
+            onset_times, onset_durations = self.music_data
+
+        mixer.music.load(self.audio_file_full_path)
+        mixer.music.set_volume(0.8)
+
+        if keep_files:
+            np.save(onset_times_file, onset_times)
+            np.save(onset_durations_file, onset_durations)
+        else:
+            os.remove(self.audio_file_full_path)
+
+            if os.path.exists(onset_times_file):
+                os.remove(onset_times_file)
+
+            if os.path.exists(onset_durations_file):
+                os.remove(onset_durations_file)
 
     def debug_mode_setup(self):
         onset_times, onset_durations = self.music_data
@@ -91,28 +159,35 @@ class GameScene:
                 continue
             for t in range(onset_duration):
                 color = min((onset_duration - t) / 2, 240)
-                self.debug_colors[onset_time+t] = (color, color, color)
+                self.debug_colors[onset_time + t] = (color, color, color)
         self.click_sound_effect = mixer.Sound('data/audio/sound_effects/click.wav')
 
-
     def run(self, seed=None):
-        self._init(seed)
         running = True
+        if self.paused:
+            pygame.mixer.music.unpause()
+            self.paused = False
         while running:
+            pygame.event.pump()  # Process pending events
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
-                        running = False
-            self.step()
-            if not self.game_started and self.clock.get_fps() > 1:
-                mixer.music.play()  # Start music playback
-                self.game_started = True
-            if self.game_started and (not mixer.music.get_busy()):
-                running = False  # Stop the game loop when music finishes playing
-            self.render()
-        self.close()
+                        self.paused = True
+            if not self.paused:
+                self.step()
+                if not self.game_started and self.clock.get_fps() > 1:
+                    mixer.music.play()  # Start music playback
+                    self.game_started = True
+                if self.game_started and (not mixer.music.get_busy()):
+                    running = False  # Stop the game loop when music finishes playing
+                self.render()
+            else:
+                pygame.mixer.music.pause()
+                running = False
+                return "Pause"
+        return "End"
 
     def restart(self, seed=None, options=None):
         random.seed(seed)
@@ -176,8 +251,33 @@ class GameScene:
             pygame.quit()
 
 
+class PauseScene:
+    def __init__(self, window):
+        self.resume_selected = False
+        self.window = window
+
+    def run(self, seed=None):
+        pygame.event.pump()
+        self.handle_events()
+        if self.resume_selected:
+            return "Resume"
+
+    def handle_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    self.resume_selected = True
+
+    def render(self):
+        """win = pygame.Surface((screen_width, screen_height))
+
+        window.blit(win, win.get_rect())
+        pygame.event.pump()
+        pygame.display.update()"""
+
+
 def main():
-    game = GameScene()
+    game = Game()
     game.run()
 
 
