@@ -79,7 +79,7 @@ class GameScene:
 
     def initialize(self):
         random.seed(self.seed)
-        self.load_assets(keep_files=True)
+        self.load_assets(keep_files=True, use_new_files=True)
 
         if self.clock is None:
             self.clock = pygame.time.Clock()
@@ -91,7 +91,7 @@ class GameScene:
         if self.mode == "debug":
             self.debug_mode_setup()
 
-    def load_assets(self, keep_files=False, use_new_files=False):
+    def load_assets(self, keep_files=True, use_new_files=True):
         file_path = os.path.join("data", "audio")
         file_name = "audio.mp3"
         self.audio_file_full_path = os.path.join(file_path, file_name)
