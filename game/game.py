@@ -83,11 +83,14 @@ class GameScene:
         self.onset_duration_frames = [int(i * self.fps) for i in onset_durations]
         self.debug_colors = [
             (0, 0, 0)
-            for _ in range(max(self.onset_time_frames) + self.onset_duration_frames[-1])
+            for _ in range(max([onset_time + onset_duration for onset_time, onset_duration
+                                in zip(self.onset_time_frames, self.onset_duration_frames)]))
         ]
         for onset_time, onset_duration in zip(self.onset_time_frames, self.onset_duration_frames):
+            if onset_duration > self.fps * 4:  # ignore meaningless ones (>4 seconds)
+                continue
             for t in range(onset_duration):
-                color = max((onset_duration - t) / 2, 60)
+                color = min((onset_duration - t) / 2, 240)
                 self.debug_colors[onset_time+t] = (color, color, color)
         self.click_sound_effect = mixer.Sound('data/audio/sound_effects/click.wav')
 
