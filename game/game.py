@@ -1,4 +1,5 @@
 import pygame
+import numpy as np
 import random
 from pattern_manager import PatternManager
 from pygame import mixer
@@ -21,6 +22,9 @@ class GameScene:
         self.seed = 777
         self.points = 0
         self.currentScene = 0
+        self.mode = "debug"
+        self.debug_colors = None
+        self.click_sound_effect = None
 
         self.pattern_manager = PatternManager(self.screen_width, self.screen_height, self.fps, self.seed, difficulty=1)
         self.background = None
@@ -37,13 +41,15 @@ class GameScene:
         if is_from_youtube:
             # youtube_url = "https://www.youtube.com/watch?v=yXMPAMKUVgY"
             # youtube_url = "https://www.youtube.com/watch?v=tbK7JxFDOOg"
-            youtube_url = "https://www.youtube.com/watch?v=i0K40f-6mLs"
+            # youtube_url = "https://www.youtube.com/watch?v=i0K40f-6mLs"
+            # youtube_url = "https://www.youtube.com/watch?v=GyP1EWjS2rM"
+            youtube_url = "https://www.youtube.com/watch?v=kagoEGKHZvU"
             # youtube_url = "https://www.youtube.com/watch?v=HMGetv40FkI"
             # youtube_url = "https://www.youtube.com/watch?v=FYAIgqIpR08"
             download_youtube_audio(youtube_url, output_path, output_name)
         else:
             print("File already exists. Skipping download.")
-        music_data = notedetection.process_audio(filename)
+        self.music_data = notedetection.process_audio(filename)
         if self.window is None:
             pygame.init()
             pygame.display.init()
@@ -63,11 +69,28 @@ class GameScene:
         self.cursor_img_rect = self.cursor_img.get_rect()
         self.cursor_pressed_img = pygame.image.load('data/images/cursor_pressed.png').convert_alpha()
         self.cursor_pressed_img_rect = self.cursor_pressed_img.get_rect()
-        self.pattern_manager.generate_map(music_data)
+        self.pattern_manager.generate_map(self.music_data)
         self.pattern_manager.prerender_patterns(win)
         if self.background is None:
             background = pygame.image.load("data/images/furina.jpg").convert()
             self.background = pygame.transform.smoothscale(background, (self.screen_width, self.screen_height))
+        if self.mode == "debug":
+            self.debug_mode_setup()
+
+    def debug_mode_setup(self):
+        onset_times, onset_durations = self.music_data
+        self.onset_time_frames = [int(i * self.fps) for i in onset_times]
+        self.onset_duration_frames = [int(i * self.fps) for i in onset_durations]
+        self.debug_colors = [
+            (0, 0, 0)
+            for _ in range(max(self.onset_time_frames) + self.onset_duration_frames[-1])
+        ]
+        for onset_time, onset_duration in zip(self.onset_time_frames, self.onset_duration_frames):
+            for t in range(onset_duration):
+                color = max((onset_duration - t) / 2, 60)
+                self.debug_colors[onset_time+t] = (color, color, color)
+        self.click_sound_effect = mixer.Sound('data/audio/sound_effects/click.wav')
+
 
     def run(self, seed=None):
         self._init(seed)
@@ -113,6 +136,11 @@ class GameScene:
         win = pygame.Surface((self.screen_width, self.screen_height))
         # win.blit(self.background, (0, 0))
         win.fill((0, 0, 0))  # Fill the surface with black color
+        if self.mode == "debug":
+            rect = pygame.Rect(0, 0, 100, 100)  # Create a rectangle for the top left corner
+            pygame.draw.rect(win, self.debug_colors[self.steps], rect)  # Fill the rectangle according to the onsets
+            if self.steps in self.onset_time_frames:
+                self.click_sound_effect.play()
         # rendering objects
         self.pattern_manager.render_patterns(win, self.steps)
         if self.input_manager.is_user_holding:
