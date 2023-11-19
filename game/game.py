@@ -7,6 +7,7 @@ from utils import notedetection
 from utils.youtubeDL import download_youtube_audio
 from utils.input_manager import InputManager
 import os
+import copy
 
 
 class Game:
@@ -22,7 +23,7 @@ class Game:
                                               pygame.HWSURFACE | pygame.DOUBLEBUF)
 
         self.game_scene = GameScene(self.window)
-        self.pause_scene = PauseScene(self.window)
+        self.pause_scene = PauseScene(self.window, None)
         self.current_scene = self.game_scene
 
     def run(self, seed=None):
@@ -39,7 +40,7 @@ class Game:
 
     def pause_game(self):
         self.current_scene = self.pause_scene
-        self.pause_scene.resume_selected = False
+        self.pause_scene.paused_screen = self.game_scene.window_buffer
 
     def resume_game(self):
         self.current_scene = self.game_scene
@@ -74,6 +75,7 @@ class GameScene:
 
         self.input_manager = InputManager()
         self.pattern_manager = PatternManager(self.screen_width, self.screen_height, self.fps, self.seed, difficulty=1)
+        self.window_buffer = None
 
         self.initialize()
 
@@ -129,7 +131,6 @@ class GameScene:
         else:
             self.music_data = notedetection.process_audio(self.audio_file_full_path)
             onset_times, onset_durations = self.music_data
-
         mixer.music.load(self.audio_file_full_path)
         mixer.music.set_volume(0.8)
 
@@ -149,10 +150,11 @@ class GameScene:
         onset_times, onset_durations = self.music_data
         self.onset_time_frames = [int(i * self.fps) for i in onset_times]
         self.onset_duration_frames = [int(i * self.fps) for i in onset_durations]
+        self.debug_maximum_t = max([onset_time + onset_duration for onset_time, onset_duration
+                                    in zip(self.onset_time_frames, self.onset_duration_frames)]) + 1
         self.debug_colors = [
             (0, 0, 0)
-            for _ in range(max([onset_time + onset_duration for onset_time, onset_duration
-                                in zip(self.onset_time_frames, self.onset_duration_frames)]))
+            for _ in range(self.debug_maximum_t)
         ]
         for onset_time, onset_duration in zip(self.onset_time_frames, self.onset_duration_frames):
             if onset_duration > self.fps * 4:  # ignore meaningless ones (>4 seconds)
@@ -204,29 +206,29 @@ class GameScene:
         print("Actual FPS:", fps)
         if fps and self.game_started:
             self.real_time_steps += self.fps / fps
-        return self._render_frame(False)
-
-    def _render_frame(self, terminated):
-        if terminated:
-            _ = 1  # do something
 
         self.sync_game_and_music()
         win = pygame.Surface((self.screen_width, self.screen_height))
+        self.window_buffer = pygame.Surface((self.screen_width, self.screen_height))
         # win.blit(self.background, (0, 0))
         win.fill((0, 0, 0))  # Fill the surface with black color
+        self.window_buffer.fill((0, 0, 0))
         if self.mode == "debug":
             rect = pygame.Rect(0, 0, 100, 100)  # Create a rectangle for the top left corner
-            pygame.draw.rect(win, self.debug_colors[self.steps], rect)  # Fill the rectangle according to the onsets
+            if self.steps < self.debug_maximum_t:
+                pygame.draw.rect(win, self.debug_colors[self.steps], rect)  # Fill the rectangle according to the onsets
             if self.steps in self.onset_time_frames:
                 self.click_sound_effect.play()
         # rendering objects
         self.pattern_manager.render_patterns(win, self.steps)
+        self.window_buffer.blit(win, (0, 0))
         if self.input_manager.is_user_holding:
             self.cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
             win.blit(self.cursor_pressed_img, self.cursor_pressed_img_rect)  # draw the cursor
         else:
             self.cursor_img_rect.center = pygame.mouse.get_pos()  # update position
             win.blit(self.cursor_img, self.cursor_img_rect)  # draw the cursor
+
         # render window buffer to screen
         self.window.blit(win, win.get_rect())
         pygame.event.pump()
@@ -252,28 +254,77 @@ class GameScene:
 
 
 class PauseScene:
-    def __init__(self, window):
+    def __init__(self, window, paused_screen):
         self.resume_selected = False
         self.window = window
+        self.screen_width, self.screen_height = window.get_size()
+        self.paused_screen = paused_screen
+        self.input_manager = InputManager()
+        self.clock = pygame.time.Clock()
+
+        self.cursor_img = pygame.image.load('data/images/cursor.png').convert_alpha()
+        self.cursor_img_rect = self.cursor_img.get_rect()
+        self.cursor_pressed_img = pygame.image.load('data/images/cursor_pressed.png').convert_alpha()
+        self.cursor_pressed_img_rect = self.cursor_pressed_img.get_rect()
 
     def run(self, seed=None):
-        pygame.event.pump()
-        self.handle_events()
-        if self.resume_selected:
-            return "Resume"
-
-    def handle_events(self):
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    self.resume_selected = True
+        self.resume_selected = False
+        while not self.resume_selected:
+            self.input_manager.update()
+            self.render()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return "End"
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        self.resume_selected = True
+            if self.resume_selected:
+                self.countdown()
+                return "Resume"
 
     def render(self):
-        """win = pygame.Surface((screen_width, screen_height))
-
-        window.blit(win, win.get_rect())
+        win = pygame.Surface((self.screen_width, self.screen_height))
+        win.blit(self.paused_screen, (0, 0))
+        self._apply_whiteness(win)
+        if self.input_manager.is_mouse_holding:
+            self.cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
+            win.blit(self.cursor_pressed_img, self.cursor_pressed_img_rect)  # draw the cursor
+        else:
+            self.cursor_img_rect.center = pygame.mouse.get_pos()  # update position
+            win.blit(self.cursor_img, self.cursor_img_rect)  # draw the cursor
+        self.window.blit(win, win.get_rect())
         pygame.event.pump()
-        pygame.display.update()"""
+        pygame.display.update()
+
+    def countdown(self):
+        font = pygame.font.Font(None, 100)  # Font for the countdown numbers
+        countdown_time = 3
+        for i in range(countdown_time * 60):
+            win = pygame.Surface((self.screen_width, self.screen_height))
+            win.blit(self.paused_screen, (0, 0))
+            countdown_text = font.render(str(countdown_time - i // 60), True, (255, 255, 255))
+            countdown_text_rect = countdown_text.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
+            win.blit(countdown_text, countdown_text_rect)
+            if self.input_manager.is_mouse_holding:
+                self.cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
+                win.blit(self.cursor_pressed_img, self.cursor_pressed_img_rect)  # draw the cursor
+            else:
+                self.cursor_img_rect.center = pygame.mouse.get_pos()  # update position
+                win.blit(self.cursor_img, self.cursor_img_rect)  # draw the cursor
+            self.window.blit(win, win.get_rect())
+            pygame.event.pump()
+            pygame.display.update()
+            self.clock.tick(60)
+
+    @staticmethod
+    def _apply_whiteness(win):
+        whiteness = 100
+
+        tmp = pygame.Surface(win.get_size())
+        tmp.fill((whiteness, whiteness, whiteness))
+
+        # Blit the temporary surface onto the original surface
+        win.blit(tmp, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
 
 
 def main():
