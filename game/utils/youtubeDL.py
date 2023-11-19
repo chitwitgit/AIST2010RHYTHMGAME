@@ -1,6 +1,5 @@
 import os
 from pytube import YouTube
-import subprocess
 import time
 import ffmpeg
 
