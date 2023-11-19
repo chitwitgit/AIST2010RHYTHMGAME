@@ -1,5 +1,6 @@
 import pygame
 
+
 class InputManager:
     def __init__(self):
         self.mouse_state = pygame.mouse.get_pressed()
@@ -16,6 +17,14 @@ class InputManager:
         self.mouse_pos = pygame.mouse.get_pos()
         self.prev_keys = self.keys
         self.keys = pygame.key.get_pressed()
+
+    @property
+    def is_mouse_clicked(self):
+        return self.mouse_state[0] and not self.prev_mouse_state[0]
+
+    @property
+    def is_mouse_holding(self):
+        return self.mouse_state[0]
 
     @property
     def is_user_inputted(self):
