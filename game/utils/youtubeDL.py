@@ -2,6 +2,7 @@ import os
 from pytube import YouTube
 import subprocess
 import time
+import ffmpeg
 
 
 def download_youtube_audio(url, output_path, output_name):
@@ -14,7 +15,7 @@ def download_youtube_audio(url, output_path, output_name):
         print("Audio downloaded successfully!")
 
         # Convert the audio to mp3
-        subprocess.run(["ffmpeg", "-i", os.path.join(output_path, stream.default_filename), output_file_path])
+        ffmpeg.input(os.path.join(output_path, stream.default_filename)).output(output_file_path).run()
         os.remove(os.path.join(output_path, stream.default_filename))
         while not os.path.exists(output_file_path):
             time.sleep(1)
