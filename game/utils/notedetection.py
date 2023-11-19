@@ -55,7 +55,7 @@ def merge_vocal_background_with_padding(vocal_onset, vocal_duration, background_
 def vocal_separation(y, sr):
     pre_time = time.time()
     # And compute the spectrogram magnitude and phase
-    S_full, phase = librosa.magphase(librosa.stft(y))
+    S_full, phase = librosa.magphase(librosa.stft(y, n_fft=1024, hop_length=512))
     cur_time = time.time()
     print(cur_time - pre_time)
     pre_time = cur_time
@@ -96,8 +96,18 @@ def vocal_separation(y, sr):
     # adjust 1
     # noisy: 2, 10
     # clean: 10, 28
-    margin_i, margin_v = 10, 20
-    power = 3
+
+    margin_i, margin_v = 4, 7
+    power = 2
+
+    filter_mean = np.max(S_filter)
+    unfilter_mean = np.max(S_full - S_filter)
+    # original 12
+    target_ratio = 12
+    margin_v = target_ratio ** (1/power) * filter_mean / unfilter_mean
+    print('new margin_v:', margin_v)
+    print("times 4:", np.mean((unfilter_mean * 4) ** power / (filter_mean ** power)))
+    print("times 7:", np.mean((unfilter_mean * 7) ** power / (filter_mean ** power)))
 
     mask_i = librosa.util.softmask(S_filter,
                                    margin_i * (S_full - S_filter),
@@ -184,7 +194,8 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512):
     for x, fs in zip([x_foreground, x_background], [fs, fs]):
 
         y = abs(librosa.stft(x, n_fft=fft_length, hop_length=fft_hop_length, center=False))
-        onset_env = librosa.onset.onset_strength(y=x, sr=fs)
+        S = librosa.feature.melspectrogram(y=x, sr=fs, n_fft=fft_length, hop_length=fft_hop_length)
+        onset_env = librosa.onset.onset_strength(y=x, sr=fs, S=S)
         tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=fs)
         print('tempo:', tempo)
 
