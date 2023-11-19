@@ -86,7 +86,7 @@ def merge_vocal_background_with_padding(vocal_onset, vocal_duration, background_
 def vocal_separation(y, sr):
     pre_time = time.time()
     # And compute the spectrogram magnitude and phase
-    S_full, phase = librosa.magphase(librosa.stft(y, n_fft=1024, hop_length=512))
+    S_full, phase = librosa.magphase(librosa.stft(y))
     cur_time = time.time()
     print(cur_time - pre_time)
     pre_time = cur_time
@@ -222,20 +222,25 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512):
     onset_list = []
     duration_list = []
     # adjust 2
-    for x, fs in zip([x_foreground, x_background], [fs, fs]):
+
+    onset_env = librosa.onset.onset_strength(y=x, sr=fs)
+    tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=fs)
+
+    for x in [x_foreground, x_background]:
 
         y = abs(librosa.stft(x, n_fft=fft_length, hop_length=fft_hop_length, center=False))
         S = librosa.feature.melspectrogram(y=x, sr=fs, n_fft=fft_length, hop_length=fft_hop_length)
         onset_env = librosa.onset.onset_strength(y=x, sr=fs)
-        tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=fs)
+        # tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=fs)
         print('tempo:', tempo)
 
         onset_frames = librosa.onset.onset_detect(onset_envelope=onset_env, sr=fs)
         # using onset_detect from librosa to detect onsets (using parameters delta=0.04, wait=4)
+        print('frame rate:', fs)
         onset_times = librosa.frames_to_time(onset_frames, sr=fs)
         onset_samples = librosa.frames_to_samples(onset_frames)
         onset_durations = onset_length_detection(x, y, onset_samples, sr=fs)
-        print('before:', np.max(onset_durations))
+        print('before:', np.max(onset_times), np.max(onset_durations))
 
         onset_times, onset_durations = remove_noisy_onset(onset_times, onset_durations, x, sr=fs)
         onset_times, onset_durations = merge_close_onset(onset_times, onset_durations, tempo)
@@ -248,7 +253,7 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512):
 
     # onset_times, onset_durations, onset_labels = merge_vocal_background_with_padding(onset_list[0], duration_list[0], onset_list[1], duration_list[1], tempo)
     onset_times, onset_durations = onset_list[0], duration_list[0]
-    print('after:', np.max(onset_durations))
+    print('after:', np.max(onset_times), np.max(onset_durations))
     return onset_times, onset_durations
 
 
