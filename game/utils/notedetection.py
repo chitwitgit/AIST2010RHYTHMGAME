@@ -2,6 +2,37 @@ import numpy as np
 import librosa
 import time
 
+def merge_close_onset(onset_times, onset_durations, tempo, precision=0.25):
+    spb = 60 / tempo * precision
+    i = 0
+    l = len(onset_times)
+    while i < l-1:
+        if abs(onset_times[i+1] - onset_times[i]) <= precision:
+            onset_durations[i] = max(onset_times[i] + onset_durations[i], onset_times[i+1] + onset_durations[i+1]) - onset_times[i]
+            onset_times = np.delete(onset_times, i+1)
+            onset_durations = np.delete(onset_durations, i+1)
+            l -= 1
+        else:
+            i += 1
+    return onset_times, onset_durations
+
+
+def remove_noisy_onset(onset_times, onset_durations, x, sr):
+    onset_index = librosa.time_to_samples(onset_times, sr=sr)
+    onset_index_range = onset_index.reshape(-1, 1) + np.arange(-100, 100)
+    print('onset index size:', onset_index_range.shape)
+
+    onset_sample_range = x[onset_index_range]
+    print(onset_sample_range.shape)
+    onset_amplitude = np.mean(onset_sample_range**2, axis=1)
+
+    mean_amplitude = np.mean(x**2)
+
+    valid_samples = onset_amplitude > mean_amplitude / 8
+    onset_times = onset_times[valid_samples]
+    onset_durations = onset_durations[valid_samples]
+
+    return onset_times, onset_durations
 
 def merge_vocal_background_with_padding(vocal_onset, vocal_duration, background_onset, background_duration, tempo, precision=1.0):
     spb = 60 / tempo * precision
@@ -82,7 +113,7 @@ def vocal_separation(y, sr):
     S_filter = librosa.decompose.nn_filter(S_full,
                                            aggregate=np.median,
                                            metric='cosine',
-                                           width=int(librosa.time_to_frames(3.0, sr=sr)))
+                                           width=int(librosa.time_to_frames(2.0, sr=sr)))
     cur_time = time.time()
     print(cur_time - pre_time)
     pre_time = cur_time
@@ -97,17 +128,17 @@ def vocal_separation(y, sr):
     # noisy: 2, 10
     # clean: 10, 28
 
-    margin_i, margin_v = 4, 7
+    margin_i, margin_v = 2, 10
     power = 2
 
     filter_mean = np.max(S_filter)
     unfilter_mean = np.max(S_full - S_filter)
     # original 12
-    target_ratio = 12
-    margin_v = target_ratio ** (1/power) * filter_mean / unfilter_mean
-    print('new margin_v:', margin_v)
-    print("times 4:", np.mean((unfilter_mean * 4) ** power / (filter_mean ** power)))
-    print("times 7:", np.mean((unfilter_mean * 7) ** power / (filter_mean ** power)))
+    # target_ratio = 12
+    # margin_v = target_ratio ** (1/power) * filter_mean / unfilter_mean
+    # print('new margin_v:', margin_v)
+    # print("times 4:", np.mean((unfilter_mean * 4) ** power / (filter_mean ** power)))
+    # print("times 7:", np.mean((unfilter_mean * 7) ** power / (filter_mean ** power)))
 
     mask_i = librosa.util.softmask(S_filter,
                                    margin_i * (S_full - S_filter),
@@ -195,7 +226,7 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512):
 
         y = abs(librosa.stft(x, n_fft=fft_length, hop_length=fft_hop_length, center=False))
         S = librosa.feature.melspectrogram(y=x, sr=fs, n_fft=fft_length, hop_length=fft_hop_length)
-        onset_env = librosa.onset.onset_strength(y=x, sr=fs, S=S)
+        onset_env = librosa.onset.onset_strength(y=x, sr=fs)
         tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=fs)
         print('tempo:', tempo)
 
@@ -205,6 +236,10 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512):
         onset_samples = librosa.frames_to_samples(onset_frames)
         onset_durations = onset_length_detection(x, y, onset_samples, sr=fs)
         print('before:', np.max(onset_durations))
+
+        onset_times, onset_durations = remove_noisy_onset(onset_times, onset_durations, x, sr=fs)
+        onset_times, onset_durations = merge_close_onset(onset_times, onset_durations, tempo)
+
         onset_times, onset_durations = onset_roundings(onset_times, onset_durations, tempo)
         # onset_times, onset_durations = onset_paddings(onset_times, onset_durations, tempo, np.abs(x), sr=fs)
 
