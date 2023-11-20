@@ -2,7 +2,7 @@ import numpy as np
 import librosa
 import time
 
-def merge_close_onset(onset_times, onset_durations, tempo, precision=0.25):
+def merge_close_onset(onset_times, onset_durations, tempo, precision=0.125):
     spb = 60 / tempo * precision
     i = 0
     l = len(onset_times)
@@ -20,15 +20,12 @@ def merge_close_onset(onset_times, onset_durations, tempo, precision=0.25):
 def remove_noisy_onset(onset_times, onset_durations, x, sr):
     onset_index = librosa.time_to_samples(onset_times, sr=sr)
     onset_index_range = onset_index.reshape(-1, 1) + np.arange(-100, 100)
-    print('onset index size:', onset_index_range.shape)
-
     onset_sample_range = x[onset_index_range]
-    print(onset_sample_range.shape)
-    onset_amplitude = np.mean(onset_sample_range**2, axis=1)
+    onset_amplitude = np.sqrt(np.mean(onset_sample_range**2, axis=1))
 
-    mean_amplitude = np.mean(x**2)
+    mean_amplitude = np.mean(onset_amplitude)
 
-    valid_samples = onset_amplitude > mean_amplitude / 8
+    valid_samples = onset_amplitude > mean_amplitude / 12
     onset_times = onset_times[valid_samples]
     onset_durations = onset_durations[valid_samples]
 
@@ -174,12 +171,24 @@ def load_audio(filename):
     return x, fs
 
 
-def onset_roundings(onset_times, onset_durations, tempo, precision=0.25):
+def onset_roundings(onset_times, onset_durations, tempo, precision=0.125):
     spb = 60 / tempo * precision
-    onset_times = np.around(onset_times / spb, decimals=0) * spb
-    onset_durations = np.around(onset_durations / spb, decimals=0) * spb
-    onset_durations = np.clip(onset_durations, spb, 99999)
-    return onset_times, onset_durations
+    phase_shifts = np.linspace(0, spb, num=60)  # Generate a range of phase shifts
+
+    best_alignment = None
+    best_error = float('inf')
+
+    for phase_shift in phase_shifts:
+        aligned_onset_times = np.around((onset_times - phase_shift) / spb, decimals=0) * spb + phase_shift
+        alignment_error = np.sum(np.cbrt(np.abs(aligned_onset_times - onset_times)))
+        # cube root is used to decrease the effect of outliers
+
+        if alignment_error < best_error:
+            aligned_onset_durations = np.around(onset_durations / spb, decimals=0) * spb
+            best_alignment = (aligned_onset_times, aligned_onset_durations)
+            best_error = alignment_error
+
+    return best_alignment
 
 
 def onset_paddings(onset_times, onset_durations, tempo, abs_x, precisions=1.0, sr=22050):
@@ -225,6 +234,7 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512):
 
     onset_env = librosa.onset.onset_strength(y=x, sr=fs)
     tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=fs)
+    tempo = np.around(tempo, 0)
 
     for x in [x_foreground, x_background]:
 
@@ -254,7 +264,7 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512):
     # onset_times, onset_durations, onset_labels = merge_vocal_background_with_padding(onset_list[0], duration_list[0], onset_list[1], duration_list[1], tempo)
     onset_times, onset_durations = onset_list[0], duration_list[0]
     print('after:', np.max(onset_times), np.max(onset_durations))
-    return onset_times, onset_durations
+    return onset_times, onset_durations, tempo
 
 
 def onset_detection_back(x, fs, fft_length=1024, fft_hop_length=512):

@@ -7,8 +7,8 @@ from utils import notedetection
 from utils.youtubeDL import download_youtube_audio
 from utils.input_manager import InputManager
 import os
-import copy
 
+youtube_link = "https://www.youtube.com/watch?v=HFPBd_mQYhg"
 
 class Game:
     def __init__(self):
@@ -99,6 +99,7 @@ class GameScene:
         self.audio_file_full_path = os.path.join(file_path, file_name)
         onset_times_file = os.path.join("data", "onset_times.npy")
         onset_durations_file = os.path.join("data", "onset_durations.npy")
+        tempo_file = os.path.join("data", "tempo.npy")
 
         if use_new_files:
             if os.path.exists(self.audio_file_full_path):
@@ -110,9 +111,12 @@ class GameScene:
             if os.path.exists(onset_durations_file):
                 os.remove(onset_durations_file)
 
+            if os.path.exists(tempo_file):
+                os.remove(tempo_file)
+
         is_from_youtube = not os.path.exists(self.audio_file_full_path)
         if is_from_youtube:
-            youtube_url = "https://www.youtube.com/watch?v=kagoEGKHZvU"
+            youtube_url = youtube_link
             download_youtube_audio(youtube_url, file_path, file_name)
         else:
             print("File already exists. Skipping download.")
@@ -124,19 +128,22 @@ class GameScene:
             background = pygame.image.load("data/images/furina.jpg").convert()
             self.background = pygame.transform.smoothscale(background, (self.screen_width, self.screen_height))
 
-        if os.path.exists(onset_times_file) and os.path.exists(onset_durations_file):
+        if os.path.exists(onset_times_file) and os.path.exists(onset_durations_file) and os.path.exists(tempo_file):
             onset_times = np.load(onset_times_file)
             onset_durations = np.load(onset_durations_file)
-            self.music_data = onset_times, onset_durations
+            tempo = np.load(tempo_file)
+            self.music_data = onset_times, onset_durations, int(tempo)
         else:
             self.music_data = notedetection.process_audio(self.audio_file_full_path)
-            onset_times, onset_durations = self.music_data
+            onset_times, onset_durations, tempo = self.music_data
+            tempo = np.array([tempo])
         mixer.music.load(self.audio_file_full_path)
         mixer.music.set_volume(0.8)
 
         if keep_files:
             np.save(onset_times_file, onset_times)
             np.save(onset_durations_file, onset_durations)
+            np.save(tempo_file, tempo)
         else:
             os.remove(self.audio_file_full_path)
 
@@ -147,7 +154,7 @@ class GameScene:
                 os.remove(onset_durations_file)
 
     def debug_mode_setup(self):
-        onset_times, onset_durations = self.music_data
+        onset_times, onset_durations, *_ = self.music_data
         self.onset_time_frames = [int(i * self.fps) for i in onset_times]
         self.onset_duration_frames = [int(i * self.fps) for i in onset_durations]
         self.debug_maximum_t = max([onset_time + onset_duration for onset_time, onset_duration
@@ -157,10 +164,11 @@ class GameScene:
             for _ in range(self.debug_maximum_t)
         ]
         for onset_time, onset_duration in zip(self.onset_time_frames, self.onset_duration_frames):
-            if onset_duration > self.fps * 4:  # ignore meaningless ones (>4 seconds)
+            if onset_duration > self.fps * 0.5:  # ignore onsets > 0.5s
+                self.debug_colors[onset_time] = (240, 240, 240)
                 continue
             for t in range(onset_duration):
-                color = min((onset_duration - t) / 2, 240)
+                color = min((onset_duration - t) * 480, 240)
                 self.debug_colors[onset_time + t] = (color, color, color)
         self.click_sound_effect = mixer.Sound('data/audio/sound_effects/click.wav')
 
