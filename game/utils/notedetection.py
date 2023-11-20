@@ -227,16 +227,17 @@ def onset_paddings(onset_times, onset_durations, tempo, abs_x, precisions=1.0, s
     return onset_times, onset_durations
 
 
-def onset_detection(x, fs, fft_length=1024, fft_hop_length=512):
+def onset_detection(x, fs, fft_length=1024, fft_hop_length=512, tempo=None):
     x_foreground, x_background = vocal_separation(copy.deepcopy(x), fs)
     onset_list = []
     duration_list = []
     # adjust 2
 
     onset_env = librosa.onset.onset_strength(y=x, sr=fs)
-    tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=fs)
-    tempo = np.around(tempo, 0)
-    tempo = 130
+    if tempo is None:
+        tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=fs)
+        tempo = np.around(tempo, 0)
+
     for x in [x_foreground, x_background]:
 
         y = abs(librosa.stft(x, n_fft=fft_length, hop_length=fft_hop_length, center=False))
@@ -360,6 +361,6 @@ def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=
     return durations
 
 
-def process_audio(filename):
+def process_audio(filename, tempo=None):
     x, fs = load_audio(filename)
-    return onset_detection(x, fs)
+    return onset_detection(x, fs, tempo=tempo)

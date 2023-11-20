@@ -9,7 +9,8 @@ from utils.input_manager import InputManager
 import os
 
 youtube_link = "https://www.youtube.com/watch?v=HFPBd_mQYhg"
-
+youtube_link = "https://www.youtube.com/watch?v=fnAy9nlRuZs&ab_channel=KotoriFridayBass%F0%9F%85%A5"
+given_tempo = None
 class Game:
     def __init__(self):
         self.game_scene = None
@@ -134,7 +135,7 @@ class GameScene:
             tempo = np.load(tempo_file)
             self.music_data = onset_times, onset_durations, int(tempo)
         else:
-            self.music_data = notedetection.process_audio(self.audio_file_full_path)
+            self.music_data = notedetection.process_audio(self.audio_file_full_path, tempo=given_tempo)
             onset_times, onset_durations, tempo = self.music_data
             tempo = np.array([tempo])
         mixer.music.load(self.audio_file_full_path)
