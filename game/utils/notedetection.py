@@ -1,6 +1,7 @@
 import numpy as np
 import librosa
 import time
+import copy
 
 def merge_close_onset(onset_times, onset_durations, tempo, precision=0.125):
     spb = 60 / tempo * precision
@@ -125,7 +126,7 @@ def vocal_separation(y, sr):
     # noisy: 2, 10
     # clean: 10, 28
 
-    margin_i, margin_v = 2, 10
+    margin_i, margin_v = 2, 20
     power = 2
 
     filter_mean = np.max(S_filter)
@@ -227,7 +228,7 @@ def onset_paddings(onset_times, onset_durations, tempo, abs_x, precisions=1.0, s
 
 
 def onset_detection(x, fs, fft_length=1024, fft_hop_length=512):
-    x_foreground, x_background = vocal_separation(x, fs)
+    x_foreground, x_background = vocal_separation(copy.deepcopy(x), fs)
     onset_list = []
     duration_list = []
     # adjust 2
@@ -250,12 +251,11 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512):
         onset_times = librosa.frames_to_time(onset_frames, sr=fs)
         onset_samples = librosa.frames_to_samples(onset_frames)
         onset_durations = onset_length_detection(x, y, onset_samples, sr=fs)
-        print('before:', np.max(onset_times), np.max(onset_durations))
 
         onset_times, onset_durations = remove_noisy_onset(onset_times, onset_durations, x, sr=fs)
         onset_times, onset_durations = merge_close_onset(onset_times, onset_durations, tempo)
 
-        onset_times, onset_durations = onset_roundings(onset_times, onset_durations, tempo)
+        # onset_times, onset_durations = onset_roundings(onset_times, onset_durations, tempo)
         # onset_times, onset_durations = onset_paddings(onset_times, onset_durations, tempo, np.abs(x), sr=fs)
 
         onset_list.append(onset_times)
@@ -263,7 +263,6 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512):
 
     # onset_times, onset_durations, onset_labels = merge_vocal_background_with_padding(onset_list[0], duration_list[0], onset_list[1], duration_list[1], tempo)
     onset_times, onset_durations = onset_list[0], duration_list[0]
-    print('after:', np.max(onset_times), np.max(onset_durations))
     return onset_times, onset_durations, tempo
 
 
@@ -328,7 +327,7 @@ def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=
         # compute distribution difference
         # satisfaction = np.logical_and(satisfaction, diff > 0.5)
         # print(np.min(diff))
-        satisfaction = np.logical_and(satisfaction, diff < 1e-3)
+        satisfaction = np.logical_and(satisfaction, diff < 3e-2)
 
         # check change in max frequency peak
         # satisfaction = np.logical_and(satisfaction, np.abs(new_peaks - old_peaks) <= tolerance)
