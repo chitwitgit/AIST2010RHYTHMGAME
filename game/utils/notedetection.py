@@ -255,7 +255,7 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512):
         onset_times, onset_durations = remove_noisy_onset(onset_times, onset_durations, x, sr=fs)
         onset_times, onset_durations = merge_close_onset(onset_times, onset_durations, tempo)
 
-        # onset_times, onset_durations = onset_roundings(onset_times, onset_durations, tempo)
+        onset_times, onset_durations = onset_roundings(onset_times, onset_durations, tempo)
         # onset_times, onset_durations = onset_paddings(onset_times, onset_durations, tempo, np.abs(x), sr=fs)
 
         onset_list.append(onset_times)
