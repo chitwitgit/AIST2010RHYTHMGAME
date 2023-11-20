@@ -236,14 +236,14 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512):
     onset_env = librosa.onset.onset_strength(y=x, sr=fs)
     tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=fs)
     tempo = np.around(tempo, 0)
-
+    tempo = 130
     for x in [x_foreground, x_background]:
 
         y = abs(librosa.stft(x, n_fft=fft_length, hop_length=fft_hop_length, center=False))
         S = librosa.feature.melspectrogram(y=x, sr=fs, n_fft=fft_length, hop_length=fft_hop_length)
         onset_env = librosa.onset.onset_strength(y=x, sr=fs)
         # tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=fs)
-        print('tempo:', tempo)
+        print('tempo:', tempo, tempo2)
 
         onset_frames = librosa.onset.onset_detect(onset_envelope=onset_env, sr=fs)
         # using onset_detect from librosa to detect onsets (using parameters delta=0.04, wait=4)
