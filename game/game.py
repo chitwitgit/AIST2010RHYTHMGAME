@@ -76,6 +76,11 @@ class GameScene:
         self.paused = False
 
         self.input_manager = InputManager()
+        self.cursor_img = None
+        self.cursor_img_rect = None
+        self.cursor_pressed_img = None
+        self.cursor_pressed_img_rect = None
+
         self.pattern_manager = PatternManager(self.screen_width, self.screen_height, self.fps, self.seed, difficulty=1)
         self.window_buffer = None
 
@@ -318,10 +323,11 @@ class PauseScene:
     def countdown(self):
         font = pygame.font.Font(None, 100)  # Font for the countdown numbers
         countdown_time = 3
-        for i in range(countdown_time * 60):
+        fps = 60
+        for i in range(countdown_time * fps):
             win = pygame.Surface((self.screen_width, self.screen_height))
             win.blit(self.paused_screen, (0, 0))
-            countdown_text = font.render(str(countdown_time - i // 60), True, (255, 255, 255))
+            countdown_text = font.render(str(countdown_time - i // fps), True, (255, 255, 255))
             countdown_text_rect = countdown_text.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
             win.blit(countdown_text, countdown_text_rect)
             if self.input_manager.is_mouse_holding:
@@ -333,7 +339,7 @@ class PauseScene:
             self.window.blit(win, win.get_rect())
             pygame.event.pump()
             pygame.display.update()
-            self.clock.tick(60)
+            self.clock.tick(fps)
 
     @staticmethod
     def _apply_whiteness(win):
