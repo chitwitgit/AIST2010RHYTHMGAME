@@ -20,7 +20,7 @@ def merge_close_onset(onset_times, onset_durations, tempo, precision=0.125):
 
 def remove_noisy_onset(onset_times, onset_durations, x, sr):
     onset_index = librosa.time_to_samples(onset_times, sr=sr)
-    onset_index_range = onset_index.reshape(-1, 1) + np.arange(-100, 100)
+    onset_index_range = onset_index.reshape(-1, 1) + np.arange(0, 200)
     onset_sample_range = x[onset_index_range]
     onset_amplitude = np.sqrt(np.mean(onset_sample_range**2, axis=1))
 
@@ -335,7 +335,7 @@ def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=
         # compute distribution difference
         # satisfaction = np.logical_and(satisfaction, diff > 0.5)
         # print(np.min(diff))
-        satisfaction = np.logical_and(satisfaction, diff < 3e-2)
+        satisfaction = np.logical_and(satisfaction, diff < 5e-4)
 
         # check change in max frequency peak
         # satisfaction = np.logical_and(satisfaction, np.abs(new_peaks - old_peaks) <= tolerance)
