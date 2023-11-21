@@ -274,7 +274,7 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512, tempo=None):
     return onset_times, onset_durations, onset_bars_list, tempo
 
 
-def onset_detection_back(x, fs, fft_length=1024, fft_hop_length=512):
+def onset_detection_back(x, fs, fft_length=1024, fft_hop_length=512, tempo=None):
     y = abs(librosa.stft(x, n_fft=fft_length, hop_length=fft_hop_length, center=False))
     onset_env = librosa.onset.onset_strength(y=x, sr=fs)
     tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=fs)
@@ -287,7 +287,7 @@ def onset_detection_back(x, fs, fft_length=1024, fft_hop_length=512):
 
     onset_times, onset_durations = onset_roundings(onset_times, onset_durations, tempo)
     onset_times, onset_durations = onset_paddings(onset_times, onset_durations, tempo, np.abs(x), sr=fs)
-    return onset_times, onset_durations
+    return onset_times, onset_durations, tempo
 
 
 # detect length of each onsets
