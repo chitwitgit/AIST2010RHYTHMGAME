@@ -335,7 +335,7 @@ def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=
         # compute distribution difference
         # satisfaction = np.logical_and(satisfaction, diff > 0.5)
         # print(np.min(diff))
-        satisfaction = np.logical_and(satisfaction, diff < 5e-4)
+        satisfaction = np.logical_and(satisfaction, diff < 3e-4)
 
         # check change in max frequency peak
         # satisfaction = np.logical_and(satisfaction, np.abs(new_peaks - old_peaks) <= tolerance)
