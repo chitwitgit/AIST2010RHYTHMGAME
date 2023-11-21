@@ -17,9 +17,12 @@ class PatternManager:
         self.queue_length = 8
 
     def generate_map(self, music_data):
-        onset_times, onset_durations, *_ = music_data
+        onset_times, onset_durations, onset_bars, *_ = music_data
         onset_time_frames = [int(i * self.fps) for i in onset_times]
         onset_duration_frames = [int(i * self.fps) for i in onset_durations]
+        # print(onset_time_frames)
+        # print(onset_duration_frames)
+        # print(onset_bars)
         # self.generate_random_patterns(100)
         self.generate_patterns(onset_time_frames, onset_duration_frames)
         self.pattern_queue = self.patterns[:self.queue_length]
@@ -32,7 +35,7 @@ class PatternManager:
         random.seed(self.seed + seed_add)
         last_onset_time = 0
         for onset_time, onset_duration in zip(onset_time_frames, onset_duration_frames):
-            if onset_time - last_onset_time < 20:
+            if onset_time - last_onset_time < 10:
                 continue
             last_onset_time = onset_time
             pattern_type = random.choice(["TapPattern", "TapPattern", "TapPattern", "TapPattern", "TapPattern",

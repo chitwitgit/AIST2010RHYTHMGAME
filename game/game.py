@@ -10,7 +10,8 @@ import os
 
 youtube_link = "https://www.youtube.com/watch?v=HFPBd_mQYhg"
 youtube_link = "https://www.youtube.com/watch?v=fnAy9nlRuZs&ab_channel=KotoriFridayBass%F0%9F%85%A5"
-given_tempo = None
+youtube_link = "https://www.youtube.com/watch?v=vS_a8Edde8k"
+given_tempo = 180
 class Game:
     def __init__(self):
         self.game_scene = None
@@ -136,7 +137,7 @@ class GameScene:
             self.music_data = onset_times, onset_durations, int(tempo)
         else:
             self.music_data = notedetection.process_audio(self.audio_file_full_path, tempo=given_tempo)
-            onset_times, onset_durations, tempo = self.music_data
+            onset_times, onset_durations, onset_bars, tempo = self.music_data
             tempo = np.array([tempo])
         mixer.music.load(self.audio_file_full_path)
         mixer.music.set_volume(0.8)
@@ -212,7 +213,7 @@ class GameScene:
 
     def render(self):
         fps = self.clock.get_fps()
-        print("Actual FPS:", fps)
+        # print("Actual FPS:", fps)
         if fps and self.game_started:
             self.real_time_steps += self.fps / fps
 

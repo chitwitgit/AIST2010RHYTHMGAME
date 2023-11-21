@@ -231,6 +231,8 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512, tempo=None):
     x_foreground, x_background = vocal_separation(copy.deepcopy(x), fs)
     onset_list = []
     duration_list = []
+    onset_bars_list = []
+
     # adjust 2
 
     onset_env = librosa.onset.onset_strength(y=x, sr=fs)
@@ -262,9 +264,14 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512, tempo=None):
         onset_list.append(onset_times)
         duration_list.append(onset_durations)
 
+        # calculate the bar number for each onset
+        beats_per_bar = 8   # usually it's 4 beats per bar, but having 8 beats per pattern makes a more enjoyable map
+        bar_duration = 60 / tempo * beats_per_bar
+        onset_bars_list = [(i // bar_duration + 1) for i in onset_list]
+
     # onset_times, onset_durations, onset_labels = merge_vocal_background_with_padding(onset_list[0], duration_list[0], onset_list[1], duration_list[1], tempo)
-    onset_times, onset_durations = onset_list[0], duration_list[0]
-    return onset_times, onset_durations, tempo
+    onset_times, onset_durations, onset_bars_list = onset_list[0], duration_list[0], onset_bars_list[0]
+    return onset_times, onset_durations, onset_bars_list, tempo
 
 
 def onset_detection_back(x, fs, fft_length=1024, fft_hop_length=512):
