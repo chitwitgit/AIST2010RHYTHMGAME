@@ -101,6 +101,7 @@ class GameScene:
         self.audio_file_full_path = os.path.join(file_path, file_name)
         onset_times_file = os.path.join("data", "onset_times.npy")
         onset_durations_file = os.path.join("data", "onset_durations.npy")
+        onset_bars_file = os.path.join("data", "onset_bars.npy")
         tempo_file = os.path.join("data", "tempo.npy")
 
         if use_new_files:
@@ -112,6 +113,9 @@ class GameScene:
 
             if os.path.exists(onset_durations_file):
                 os.remove(onset_durations_file)
+
+            if os.path.exists(onset_bars_file):
+                os.remove(onset_bars_file)
 
             if os.path.exists(tempo_file):
                 os.remove(tempo_file)
@@ -130,9 +134,10 @@ class GameScene:
             background = pygame.image.load("data/images/furina.jpg").convert()
             self.background = pygame.transform.smoothscale(background, (self.screen_width, self.screen_height))
 
-        if os.path.exists(onset_times_file) and os.path.exists(onset_durations_file) and os.path.exists(tempo_file):
+        if os.path.exists(onset_times_file) and os.path.exists(onset_durations_file) and os.path.exists(onset_bars_file) and os.path.exists(tempo_file):
             onset_times = np.load(onset_times_file)
             onset_durations = np.load(onset_durations_file)
+            onset_bars = np.load(onset_bars_file)
             tempo = np.load(tempo_file)
             self.music_data = onset_times, onset_durations, int(tempo)
         else:
@@ -145,6 +150,7 @@ class GameScene:
         if keep_files:
             np.save(onset_times_file, onset_times)
             np.save(onset_durations_file, onset_durations)
+            np.save(onset_bars_file, onset_bars)
             np.save(tempo_file, tempo)
         else:
             os.remove(self.audio_file_full_path)
@@ -154,6 +160,9 @@ class GameScene:
 
             if os.path.exists(onset_durations_file):
                 os.remove(onset_durations_file)
+
+            if os.path.exists(onset_bars_file):
+                os.remove(onset_bars_file)
 
     def debug_mode_setup(self):
         onset_times, onset_durations, *_ = self.music_data

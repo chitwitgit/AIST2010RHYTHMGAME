@@ -24,12 +24,12 @@ class PatternManager:
         # print(onset_duration_frames)
         # print(onset_bars)
         # self.generate_random_patterns(100)
-        self.generate_patterns(onset_time_frames, onset_duration_frames)
+        self.generate_patterns(onset_time_frames, onset_duration_frames, onset_bars)
         self.pattern_queue = self.patterns[:self.queue_length]
         return
 
     # This is a primitive approach
-    def generate_patterns(self, onset_time_frames, onset_duration_frames):
+    def generate_patterns(self, onset_time_frames, onset_duration_frames, onset_bars):
         # make the seed dependent on the input audio in some way
         seed_add = sum(onset_duration_frames)
         random.seed(self.seed + seed_add)
