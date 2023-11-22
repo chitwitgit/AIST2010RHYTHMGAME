@@ -12,7 +12,7 @@ class PatternManager:
 
         self.patterns = []
         self.pattern_queue = None
-        self.queue_length = 8
+        self.queue_length = 12
         self.approach_rate = approach_rate
 
         # difficulty dependent variables such as circle size and approach rate
@@ -138,8 +138,10 @@ class PatternManager:
             pattern.prerender(win)
 
     def update_patterns(self, t, input_manager):
+        score_earned = 0
         for pattern in self.pattern_queue:
-            pattern.update(t, input_manager)
+            score_earned += pattern.update(t, input_manager)
+        return score_earned
 
     def render_patterns(self, win, t):
         for pattern in self.pattern_queue:

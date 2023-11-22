@@ -41,7 +41,10 @@ class Game:
                 self.pause_game()
             if state == "Resume":
                 self.resume_game()
-            if state == "End":
+            if state == "Stop Game":
+                self.close()
+                running = False
+            if state == "End": # add end screen if needed
                 self.close()
                 running = False
 
@@ -201,15 +204,14 @@ class GameScene:
         self.click_sound_effect = mixer.Sound('data/audio/sound_effects/click.wav')
 
     def run(self, seed=None):
-        running = True
         if self.paused:
             pygame.mixer.music.unpause()
             self.paused = False
-        while running:
+        while True:
             pygame.event.pump()  # Process pending events
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    running = False
+                    return "Stop Game"
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         self.paused = True
@@ -219,13 +221,11 @@ class GameScene:
                     mixer.music.play()  # Start music playback
                     self.game_started = True
                 if self.game_started and (not mixer.music.get_busy()):
-                    running = False  # Stop the game loop when music finishes playing
+                    return "End" # Stop the game loop when music finishes playing
                 self.render()
             else:
                 pygame.mixer.music.pause()
-                running = False
                 return "Pause"
-        return "End"
 
     def restart(self, seed=None, options=None):
         random.seed(seed)
@@ -235,7 +235,10 @@ class GameScene:
         if self.game_started:
             self.input_manager.update()
             self.steps += 1
-            self.pattern_manager.update_patterns(self.steps, self.input_manager)
+            score = self.data["score"]
+            score += self.pattern_manager.update_patterns(self.steps, self.input_manager)
+            self.data["score"] = score
+            print(score)
 
     def render(self):
         fps = self.clock.get_fps()

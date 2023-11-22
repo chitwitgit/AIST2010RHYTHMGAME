@@ -71,6 +71,7 @@ class TapPattern:
         self.starting_point = point
         self.ending_point = point
         self.approach_rate = approach_rate
+        self.score = 0
 
     def __repr__(self):
         return f"TapPattern(point={self.point}, radius={self.radius}, stroke_width={self.stroke_width}, " \
@@ -96,7 +97,16 @@ class TapPattern:
         self._prerendered_frame = downsampled_surface
 
     def update(self, t, input_manager):
-        self.check_mouse(t, input_manager)
+        mouse_clicked = self.check_mouse(t, input_manager)
+        if mouse_clicked:
+            time_difference = t - self.t
+            relative_time_difference = time_difference / self.lifetime
+            rounded_relative_time_difference = np.around(relative_time_difference, 2)
+            score = 100 * min(max(1.4 - 10 * abs(rounded_relative_time_difference), 0), 1)
+            score = np.around(score / 10, 0) * 10  # round to nearest ten
+            self.score += score
+            return score
+        return 0
 
     def check_mouse(self, t, input_manager):
         if self.pressed:
@@ -119,31 +129,36 @@ class TapPattern:
         if self._prerendered_frame is None:
             self.prerender(win)
 
-        # Calculate the transparency based on the t value and lifetime
-        time_difference = t - self.t
-        interpolation_factor = min(abs(time_difference) / (self.lifetime / 2), 1)
-        alpha = round(255 * (1 - interpolation_factor))
-
-        alpha = max(0, min(alpha, 255))  # Clamp alpha between 0 and 255
-        if alpha == 0:
-            return t >= self.t
+        alpha = self.calculate_alpha(t)
         frame = apply_alpha(self._prerendered_frame, alpha)
         win.blit(frame, (0, 0))
-        # render more stuff here if needed
 
         self.render_based_on_time(win, t)
         return False
 
+    def calculate_alpha(self, t):
+        time_difference = t - self.t
+        interpolation_factor = min(abs(time_difference) / (self.lifetime / 2), 1)
+        alpha = round(255 * (1 - interpolation_factor))
+        return max(0, min(alpha, 255))
+
     def render_based_on_time(self, win, t):
         time_difference = t - self.t
         relative_time_difference = time_difference / self.lifetime
-        draw_approach_circle(win, self.point, relative_time_difference, self.thickness, self.stroke_width, self.approach_rate)
+        draw_approach_circle(win, self.point, relative_time_difference, self.thickness, self.stroke_width,
+                             self.approach_rate)
 
     def render_based_on_pressed(self, win, t):
         time_difference = t - self.press_time
         relative_time_difference = time_difference / self.lifetime
         draw_clicked_circle(win, self.point, relative_time_difference, self.thickness, self.stroke_width)
-        return abs(relative_time_difference) > 0.6
+
+        font = pygame.font.Font(None, 25)  # Font for the countdown numbers
+        countdown_text = font.render(str(int(self.score)), True, (255, 255, 255))
+        countdown_text_rect = countdown_text.get_rect(center=self.point)
+        win.blit(countdown_text, countdown_text_rect)
+
+        return abs(relative_time_difference) > 0.3
 
 
 class SliderPattern(ABC):
@@ -164,6 +179,8 @@ class SliderPattern(ABC):
         self.pressed = False
         self.press_time = 0
         self.approach_rate = approach_rate
+        self.score = 0
+        self.last_pressed = None
 
     @abstractmethod
     def _compute_coordinate(self, t):
@@ -174,11 +191,39 @@ class SliderPattern(ABC):
         pass
 
     def update(self, t, input_manager):
-        self.check_mouse(t, input_manager)
+        already_pressed = self.pressed
+        mouse_clicked = self.check_mouse(t, input_manager)
+        if mouse_clicked:
+            if not already_pressed:
+                time_difference = t - self.starting_t
+                relative_time_difference = time_difference / self.lifetime
+                rounded_relative_time_difference = np.around(relative_time_difference, 2)
+                score = 100 * min(max(1.4 - 10 * abs(rounded_relative_time_difference), 0), 1)
+                score = np.around(score / 10, 0) * 10  # round to nearest ten
+                self.score += score
+                return score
+            else:
+                # only add scores for sliding during the sliding time
+                if self.starting_t <= t <= self.ending_t:
+                    score = 2
+                    self.score += score
+
+                    total_time = self.ending_t - self.starting_t
+                    p = (t - self.starting_t) / total_time
+                    p = max(0, min(p, 1))  # clamp
+                    self.last_pressed = self._compute_coordinate(p)
+                    return score
+        return 0
 
     def check_mouse(self, t, input_manager):
         if self.pressed:
-            return False
+            mouse_pos = input_manager.mouse_pos
+            # more lenient on the position for sliding
+            is_inside_circle = np.linalg.norm(np.asarray(mouse_pos) - self.starting_point) < self.thickness * 2
+            if is_inside_circle and input_manager.is_user_holding:  # inside the circle and is clicking
+                return True
+            else:
+                return False
         time_difference = t - self.starting_t
         relative_time_difference = time_difference / self.lifetime
         if abs(relative_time_difference) < 0.3:
@@ -231,24 +276,10 @@ class SliderPattern(ABC):
         if self._prerendered_frame is None:
             self.prerender(win)
 
-        # Calculate the transparency based on the t value and lifetime
-        if self.starting_t <= t <= self.ending_t:
-            alpha = 255
-        else:
-            time_difference = min(abs(self.starting_t - t), abs(t - self.ending_t))
-            interpolation_factor = min(abs(time_difference) / (self.lifetime / 2), 1)
-            alpha = round(255 * (1 - interpolation_factor))
-
-        alpha = max(0, min(alpha, 255))  # Clamp alpha between 0 and 255
-        if alpha == 0:
-            return t >= self.ending_t
+        alpha = self.calculate_alpha(t)
         frame = apply_alpha(self._prerendered_frame, alpha)
         win.blit(frame, (0, 0))
-        self.render_based_on_time(win, t)
-        self.render_based_on_pressed(win, t)
-        return False
 
-    def render_based_on_time(self, win, t):
         if t <= self.ending_t:
             if self.pressed:
                 self.draw_tracing_circle(win, t, hollow=False)
@@ -256,31 +287,57 @@ class SliderPattern(ABC):
                 self.draw_tracing_circle(win, t, hollow=True)
 
         if not self.pressed:
-            time_difference = t - self.starting_t
-            relative_time_difference = time_difference / self.lifetime
-            draw_approach_circle(win, self.starting_point, relative_time_difference, self.thickness, self.stroke_width,
-                                 self.approach_rate)
+            self.render_unpressed_state(win, t)
 
-    def render_based_on_pressed(self, win, t):
-        if not self.pressed:
-            return
+        if self.pressed:
+            self.render_pressed_state(win, t)
+        else:
+            return alpha == 0 and t >= self.ending_t
+        return False
+
+    def calculate_alpha(self, t):
+        if self.starting_t <= t <= self.ending_t:
+            alpha = 255
+        else:
+            time_difference = min(abs(self.starting_t - t), abs(t - self.ending_t))
+            interpolation_factor = min(abs(time_difference) / (self.lifetime / 2), 1)
+            alpha = round(255 * (1 - interpolation_factor))
+        return max(0, min(alpha, 255))
+
+    def render_unpressed_state(self, win, t):
+        time_difference = t - self.starting_t
+        relative_time_difference = time_difference / self.lifetime
+        draw_approach_circle(win, self.starting_point, relative_time_difference,
+                             self.thickness, self.stroke_width, self.approach_rate)
+
+    def render_pressed_state(self, win, t):
+        total_time = self.ending_t - self.starting_t
+        p = max(0, min((t - self.starting_t) / total_time, 1))
+
+        font = pygame.font.Font(None, 25)
+        countdown_text = font.render(str(int(self.score)), True, (255, 255, 255))
+
+        if self.last_pressed is None:
+            self.last_pressed = self.starting_point
+        countdown_text_rect = countdown_text.get_rect(center=tuple(self.last_pressed))
+        win.blit(countdown_text, countdown_text_rect)
+
         time_difference = t - self.press_time
         relative_time_difference = time_difference / self.lifetime
-        draw_clicked_circle(win, self.starting_point, relative_time_difference, self.thickness, self.stroke_width)
-        return abs(relative_time_difference) > 0.6
+        draw_clicked_circle(win, self.starting_point, relative_time_difference,
+                            self.thickness, self.stroke_width)
+
+        return abs(relative_time_difference) > 0.3
 
     def draw_tracing_circle(self, win, t, hollow=False):
         total_time = self.ending_t - self.starting_t
-        p = (t - self.starting_t) / total_time
-        p = max(0, min(p, 1))  # clamp
+        p = max(0, min((t - self.starting_t) / total_time, 1))
         pos = self._compute_coordinate(p)
-        pos = pos.flatten()
 
         center_color = (0, 0, 0, 0) if hollow else (255, 255, 255, 150)
         circle = circle_surface((255, 255, 255, 255), center_color,
                                 self.thickness, self.stroke_width, 1)
 
-        # to prevent some weird runtime errors formed by weird floating point ops
         pos = np.clip(pos, -2147483648, 2147483647)
 
         rect = circle.get_rect(center=pos)
@@ -330,7 +387,8 @@ class Line(SliderPattern):
 
 
 class CubicBezier(SliderPattern):
-    def __init__(self, radius, stroke_width, P0, P1, P2, P3, color, starting_t, ending_t, lifetime, approach_rate, length=-1):
+    def __init__(self, radius, stroke_width, P0, P1, P2, P3, color, starting_t, ending_t, lifetime, approach_rate,
+                 length=-1):
         self.radius = radius
         self.stroke_width = stroke_width
         self.thickness = radius + self.stroke_width
