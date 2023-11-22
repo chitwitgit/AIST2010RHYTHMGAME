@@ -9,6 +9,13 @@ from utils.input_manager import InputManager
 import os
 
 youtube_link = "https://www.youtube.com/watch?v=HFPBd_mQYhg"
+youtube_link = "https://www.youtube.com/watch?v=fnAy9nlRuZs"
+# youtube_link = "https://www.youtube.com/watch?v=vS_a8Edde8k"
+youtube_link = "https://www.youtube.com/watch?v=xtfXl7TZTac"
+given_tempo = 130
+difficulty = 8      # usually (0, 10]
+approach_rate = 10   # must be >0, usually [1, 10]
+
 
 class Game:
     def __init__(self):
@@ -34,7 +41,10 @@ class Game:
                 self.pause_game()
             if state == "Resume":
                 self.resume_game()
-            if state == "End":
+            if state == "Stop Game":
+                self.close()
+                running = False
+            if state == "End": # add end screen if needed
                 self.close()
                 running = False
 
@@ -67,24 +77,17 @@ class GameScene:
             'score': 0,
             'approach_rate': approach_rate,
             'steps': self.steps,
-            'combo': 0
+            'combo': 0,
+            'perfect_count': 0,
+            'miss_count': 0,
         }
-
-        self.points = 0
-        self.perfect_count = 0
-        self.good_count = 0
-        self.miss_count = 0
-        self.perfect_score = 100
-        self.good_score = 50
-        self.miss_score = -20
-        self.combo = 0
-        self.color = (255,255,255)
+        self.color = (255, 255, 255)
         self.font = pygame.font.Font(None, 32)
-        self.combo_text = "Combo: {}".format(self.combo)
+        self.combo_text = "Combo: {}".format(self.data['combo'])
         self.combo_label = self.font.render(self.combo_text, True, (255, 255, 255))
         self.combo_label_rect = self.combo_label.get_rect()
         self.combo_label_rect.bottomleft = (10, self.screen_height - 10)
-        self.score_text = "Score: {}".format(self.points)
+        self.score_text = "Score: {}".format(self.data['score'])
         self.score_label = self.font.render(self.score_text, True, (255, 255, 255))
         self.score_label_rect = self.score_label.get_rect()
         self.score_label_rect.topright = (self.screen_width - 10, 10)
@@ -100,7 +103,13 @@ class GameScene:
         self.paused = False
 
         self.input_manager = InputManager()
-        self.pattern_manager = PatternManager(self.screen_width, self.screen_height, self.fps, self.seed, difficulty=1)
+        self.cursor_img = None
+        self.cursor_img_rect = None
+        self.cursor_pressed_img = None
+        self.cursor_pressed_img_rect = None
+
+        self.pattern_manager = PatternManager(self.screen_width, self.screen_height, self.fps, self.seed,
+                                              difficulty=self.data["difficulty"], approach_rate=self.data["approach_rate"])
         self.window_buffer = None
 
         self.initialize()
@@ -120,12 +129,13 @@ class GameScene:
         if self.mode == "debug":
             self.debug_mode_setup()
 
-    def load_assets(self, keep_files=True, use_new_files=True):
+    def load_assets(self, keep_files=True, use_new_files=False):
         file_path = os.path.join("data", "audio")
         file_name = "audio.mp3"
         self.audio_file_full_path = os.path.join(file_path, file_name)
         onset_times_file = os.path.join("data", "onset_times.npy")
         onset_durations_file = os.path.join("data", "onset_durations.npy")
+        onset_bars_file = os.path.join("data", "onset_bars.npy")
         tempo_file = os.path.join("data", "tempo.npy")
 
         if use_new_files:
@@ -137,6 +147,9 @@ class GameScene:
 
             if os.path.exists(onset_durations_file):
                 os.remove(onset_durations_file)
+
+            if os.path.exists(onset_bars_file):
+                os.remove(onset_bars_file)
 
             if os.path.exists(tempo_file):
                 os.remove(tempo_file)
@@ -155,14 +168,15 @@ class GameScene:
             background = pygame.image.load("data/images/furina.jpg").convert()
             self.background = pygame.transform.smoothscale(background, (self.screen_width, self.screen_height))
 
-        if os.path.exists(onset_times_file) and os.path.exists(onset_durations_file) and os.path.exists(tempo_file):
+        if os.path.exists(onset_times_file) and os.path.exists(onset_durations_file) and os.path.exists(onset_bars_file) and os.path.exists(tempo_file):
             onset_times = np.load(onset_times_file)
             onset_durations = np.load(onset_durations_file)
+            onset_bars = np.load(onset_bars_file)
             tempo = np.load(tempo_file)
             self.music_data = onset_times, onset_durations, int(tempo)
         else:
-            self.music_data = notedetection.process_audio(self.audio_file_full_path)
-            onset_times, onset_durations, tempo = self.music_data
+            self.music_data = notedetection.process_audio(self.audio_file_full_path, tempo=given_tempo)
+            onset_times, onset_durations, onset_bars, tempo = self.music_data
             tempo = np.array([tempo])
         mixer.music.load(self.audio_file_full_path)
         mixer.music.set_volume(0.8)
@@ -170,6 +184,7 @@ class GameScene:
         if keep_files:
             np.save(onset_times_file, onset_times)
             np.save(onset_durations_file, onset_durations)
+            np.save(onset_bars_file, onset_bars)
             np.save(tempo_file, tempo)
         else:
             os.remove(self.audio_file_full_path)
@@ -179,6 +194,9 @@ class GameScene:
 
             if os.path.exists(onset_durations_file):
                 os.remove(onset_durations_file)
+
+            if os.path.exists(onset_bars_file):
+                os.remove(onset_bars_file)
 
     def debug_mode_setup(self):
         onset_times, onset_durations, *_ = self.music_data
@@ -200,15 +218,14 @@ class GameScene:
         self.click_sound_effect = mixer.Sound('data/audio/sound_effects/click.wav')
 
     def run(self, seed=None):
-        running = True
         if self.paused:
             pygame.mixer.music.unpause()
             self.paused = False
-        while running:
+        while True:
             pygame.event.pump()  # Process pending events
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    running = False
+                    return "Stop Game"
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         self.paused = True
@@ -218,13 +235,11 @@ class GameScene:
                     mixer.music.play()  # Start music playback
                     self.game_started = True
                 if self.game_started and (not mixer.music.get_busy()):
-                    running = False  # Stop the game loop when music finishes playing
+                    return "End" # Stop the game loop when music finishes playing
                 self.render()
             else:
                 pygame.mixer.music.pause()
-                running = False
                 return "Pause"
-        return "End"
 
     def restart(self, seed=None, options=None):
         random.seed(seed)
@@ -234,11 +249,13 @@ class GameScene:
         if self.game_started:
             self.input_manager.update()
             self.steps += 1
-            self.pattern_manager.update_patterns(self.steps, self.input_manager)
+            score = self.data["score"]
+            score += self.pattern_manager.update_patterns(self.steps, self.input_manager)
+            self.data["score"] = score
 
     def render(self):
         fps = self.clock.get_fps()
-        print("Actual FPS:", fps)
+        # print("Actual FPS:", fps)
         if fps and self.game_started:
             self.real_time_steps += self.fps / fps
 
@@ -255,7 +272,9 @@ class GameScene:
             if self.steps in self.onset_time_frames:
                 self.click_sound_effect.play()
         # rendering objects
-        self.pattern_manager.render_patterns(win, self.steps)
+        isMissed = not self.pattern_manager.render_patterns(win, self.steps)
+        if isMissed:
+            self.data["combo"] = 0
         self.window_buffer.blit(win, (0, 0))
         if self.input_manager.is_user_holding:
             self.cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
@@ -263,6 +282,9 @@ class GameScene:
         else:
             self.cursor_img_rect.center = pygame.mouse.get_pos()  # update position
             win.blit(self.cursor_img, self.cursor_img_rect)  # draw the cursor
+
+        win.blit(self.score_label, self.score_label_rect)
+        win.blit(self.combo_label, self.combo_label_rect)
 
         # render window buffer to screen
         self.window.blit(win, win.get_rect())
@@ -334,10 +356,11 @@ class PauseScene:
     def countdown(self):
         font = pygame.font.Font(None, 100)  # Font for the countdown numbers
         countdown_time = 3
-        for i in range(countdown_time * 60):
+        fps = 60
+        for i in range(countdown_time * fps):
             win = pygame.Surface((self.screen_width, self.screen_height))
             win.blit(self.paused_screen, (0, 0))
-            countdown_text = font.render(str(countdown_time - i // 60), True, (255, 255, 255))
+            countdown_text = font.render(str(countdown_time - i // fps), True, (255, 255, 255))
             countdown_text_rect = countdown_text.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
             win.blit(countdown_text, countdown_text_rect)
             if self.input_manager.is_mouse_holding:
@@ -349,7 +372,7 @@ class PauseScene:
             self.window.blit(win, win.get_rect())
             pygame.event.pump()
             pygame.display.update()
-            self.clock.tick(60)
+            self.clock.tick(fps)
 
     @staticmethod
     def _apply_whiteness(win):
