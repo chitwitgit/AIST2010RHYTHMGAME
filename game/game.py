@@ -252,8 +252,7 @@ class GameScene:
             score = self.data["score"]
             temp_score = self.pattern_manager.update_patterns(self.steps, self.input_manager)
             score += temp_score
-            print(temp_score)
-            if (temp_score):
+            if temp_score >= 2:
                 combo = self.data['combo']
                 combo += 1
                 self.data['combo'] = combo
