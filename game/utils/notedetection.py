@@ -155,8 +155,8 @@ def onset_roundings(onset_times, onset_durations, tempo, precision=0.125):
 
         if alignment_error < best_error:
             aligned_onset_durations = np.around(onset_durations / spb, decimals=0) * spb
-            valid_mask = aligned_onset_durations > 0
-            best_alignment = (aligned_onset_times, aligned_onset_durations)
+            valid_mask = onset_durations > 0
+            best_alignment = (aligned_onset_times[valid_mask], aligned_onset_durations[valid_mask])
             best_error = alignment_error
 
     return best_alignment
@@ -225,9 +225,10 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512, tempo=None):
         onset_durations = onset_length_detection(x, y, onset_samples, sr=fs)
 
         onset_times, onset_durations = remove_noisy_onset(onset_times, onset_durations, x, sr=fs)
-        onset_times, onset_durations = merge_close_onset(onset_times, onset_durations, tempo)
+
 
         onset_times, onset_durations = onset_roundings(onset_times, onset_durations, tempo)
+        onset_times, onset_durations = merge_close_onset(onset_times, onset_durations, tempo)
         # onset_times, onset_durations = onset_paddings(onset_times, onset_durations, tempo, np.abs(x), sr=fs)
 
         onset_list.append(onset_times)
@@ -260,7 +261,7 @@ def onset_detection_back(x, fs, fft_length=1024, fft_hop_length=512, tempo=None)
 
 
 # detect length of each onsets
-def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=512, sr=22050, tolerance=1):
+def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=512, sr=22050, tolerance=4):
     residual_size = fft_length - fft_hop_length
     filtered_onset_samples = onset_samples
     filtered_onset_samples[onset_samples < fft_length] = fft_length - residual_size
@@ -286,12 +287,18 @@ def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=
     standard_amplitude = abs_x[interval_samples].reshape(-1, 2 * local_range)
     standard_amplitude = np.max(standard_amplitude, axis=1)
 
+    number_of_frames = y.shape[1]
+
     temp_indices = onset_frame_indices + 1
     temp_onset_samples = onset_samples + residual_size
+    satisfaction = temp_indices < number_of_frames
+    valid_mask = np.logical_and(valid_mask, satisfaction)
+
+    temp_indices[~satisfaction] = number_of_frames - 1
+    temp_onset_samples[~satisfaction] = 0
 
     old_frame = onset_frame
 
-    number_of_frames = y.shape[1]
     while valid_mask.sum() > 0:
         new_onset_frame = y[:, temp_indices]
         new_peaks = np.argmax(new_onset_frame, axis=0)
@@ -302,12 +309,10 @@ def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=
         satisfaction = np.ones((onset_samples.shape[0]))
 
         # compute distribution difference
-        # satisfaction = np.logical_and(satisfaction, diff > 0.5)
-        # print(np.min(diff))
-        satisfaction = np.logical_and(satisfaction, diff < 5e-4)
+        satisfaction = np.logical_and(satisfaction, diff < 3e-5)
 
         # check change in max frequency peak
-        # satisfaction = np.logical_and(satisfaction, np.abs(new_peaks - old_peaks) <= tolerance)
+        satisfaction = np.logical_and(satisfaction, np.abs(new_peaks - old_peaks) <= tolerance)
 
         # use max frequency amplitude
         # satisfaction = np.logical_and(satisfaction, new_amplitude >= old_amplitude / 2)
