@@ -110,7 +110,7 @@ def vocal_separation(y, sr):
     # noisy: 2, 10
     # clean: 10, 28
 
-    margin_i, margin_v = 2, 20
+    margin_i, margin_v = 5, 20
     power = 2
 
     filter_mean = np.max(S_filter)
@@ -210,7 +210,7 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512, tempo=None):
 
     print('tempo:', tempo)
     print('frame rate:', fs)
-
+    x_background = x
     for x in [x_foreground, x_background]:
 
         y = abs(librosa.stft(x, n_fft=fft_length, hop_length=fft_hop_length, center=False))
@@ -255,7 +255,7 @@ def onset_detection_back(x, fs, fft_length=1024, fft_hop_length=512, tempo=None)
 
     onset_times, onset_durations = onset_roundings(onset_times, onset_durations, tempo)
     onset_times, onset_durations = onset_paddings(onset_times, onset_durations, tempo, np.abs(x), sr=fs)
-    return onset_times, onset_durations, tempo
+    return onset_times, onset_durations, [], tempo
 
 
 # detect length of each onsets
