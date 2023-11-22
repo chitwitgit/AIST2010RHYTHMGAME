@@ -58,7 +58,7 @@ class PatternManager:
         if onset_time - self.last_onset_time < 10:
             return
         self.last_onset_time = onset_time
-        sequence_type = random.choice(["RandomSequence"])
+        # sequence_type = random.choice(["RandomSequence"])
         pattern_type = random.choice(["TapPattern", "TapPattern", "TapPattern", "TapPattern", "TapPattern",
                                       "Line", "CubicBezier", "Arc"])
         t = onset_time
