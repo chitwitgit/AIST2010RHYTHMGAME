@@ -14,7 +14,7 @@ youtube_link = "https://www.youtube.com/watch?v=fnAy9nlRuZs"
 youtube_link = "https://www.youtube.com/watch?v=xtfXl7TZTac"
 given_tempo = 130
 difficulty = 8      # usually (0, 10]
-approach_rate = 1   # must be >0, usually [1, 10]
+approach_rate = 10   # must be >0, usually [1, 10]
 
 
 class Game:
@@ -76,7 +76,8 @@ class GameScene:
             'difficulty': difficulty,
             'score': 0,
             'approach_rate': approach_rate,
-            'steps': self.steps
+            'steps': self.steps,
+            'combo': 0
         }
         self.audio_file_full_path = None
         self.pattern_manager = None
@@ -238,7 +239,6 @@ class GameScene:
             score = self.data["score"]
             score += self.pattern_manager.update_patterns(self.steps, self.input_manager)
             self.data["score"] = score
-            print(score)
 
     def render(self):
         fps = self.clock.get_fps()
@@ -259,7 +259,9 @@ class GameScene:
             if self.steps in self.onset_time_frames:
                 self.click_sound_effect.play()
         # rendering objects
-        self.pattern_manager.render_patterns(win, self.steps)
+        isMissed = not self.pattern_manager.render_patterns(win, self.steps)
+        if isMissed:
+            self.data["combo"] = 0
         self.window_buffer.blit(win, (0, 0))
         if self.input_manager.is_user_holding:
             self.cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
