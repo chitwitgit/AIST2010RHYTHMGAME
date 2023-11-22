@@ -58,15 +58,13 @@ class Game:
 
         self.game_scene = GameScene(self.window, self.data)
         self.pause_scene = PauseScene(self.window, None)
-        self.current_scene = self.game_scene
         self.menu_scene = MenuScene(self.window, self.data)
+        self.current_scene = self.menu_scene
 
 
     def run(self, seed=None):
         running = True
         while running:
-            #state = self.current_scene.run(seed)
-            self.menu()
             state = self.current_scene.run(seed)
             if state == "Pause":
                 self.pause_game()
