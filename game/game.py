@@ -24,6 +24,7 @@ class Game:
         self.game_scene = None
         self.pause_scene = None
         self.current_scene = None
+        self.menu_scene = None
         self.screen_width = 800
         self.screen_height = 450
         pygame.init()
@@ -34,6 +35,7 @@ class Game:
         self.game_scene = GameScene(self.window)
         self.pause_scene = PauseScene(self.window, None)
         self.current_scene = self.game_scene
+        self.menu_scene = MenuScene(self.window)
 
     def run(self, seed=None):
         running = True
@@ -43,6 +45,8 @@ class Game:
                 self.pause_game()
             if state == "Resume":
                 self.resume_game()
+            if state == "Menu":
+                self.menu()
             if state == "Stop Game":
                 self.close()
                 running = False
@@ -56,6 +60,9 @@ class Game:
 
     def resume_game(self):
         self.current_scene = self.game_scene
+
+    def menu(self):
+        self.current_scene = self.menu_scene
 
     def close(self):
         if self.window is not None:
@@ -119,7 +126,7 @@ class GameScene:
     def initialize(self):
         random.seed(self.seed)
         # self.load_assets(keep_files=True, use_new_files=True)   # if you want to try a new song
-        self.load_assets(keep_files=True, use_new_files=True)  # if same song which has been downloaded
+        self.load_assets(keep_files=True, use_new_files=False)  # if same song which has been downloaded
 
         if self.clock is None:
             self.clock = pygame.time.Clock()
@@ -396,6 +403,87 @@ class PauseScene:
             pygame.event.pump()
             pygame.display.update()
             self.clock.tick(fps)
+
+class MenuScene:
+    def __init__(self, window):
+        self.difficulty_selected = False
+        self.window = window
+        self.screen_width, self.screen_height = window.get_size()
+        self.menu_screen = self.window.fill((0, 0, 0))
+        self.input_manager = InputManager()
+        self.clock = pygame.time.Clock()
+
+        # Define label properties
+        self.label_text = "Difficulty"
+        self.label_font = pygame.font.Font(None, 36)
+        self.label_color = (255, 255, 255)  # White color
+
+        # Define button properties
+        self.button_width, self.button_height = 70, 30
+        self.button_margin = 10
+        self.button_color = (0, 255, 0)  # Green color
+        self.button_font = pygame.font.Font(None, 24)
+        self.button_text_color = (255, 255, 255)  # White color
+
+        # Calculate total width for buttons and margins
+        self.total_width = (self.button_width + self.button_margin) * 10 - self.button_margin
+        self.start_x = (self.screen_width - self.total_width) // 2
+        self.button_pos_y = (self.screen_height - self.button_height) // 2
+
+        # Calculate label position
+        self.label_pos_x = self.start_x - self.label_font.size(self.label_text)[0] - 10
+        self.label_pos_y = (self.screen_height - self.label_font.size(self.label_text)[1]) // 2
+
+        self.cursor_img = pygame.image.load('data/images/cursor.png').convert_alpha()
+        self.cursor_img_rect = self.cursor_img.get_rect()
+        self.cursor_pressed_img = pygame.image.load('data/images/cursor_pressed.png').convert_alpha()
+        self.cursor_pressed_img_rect = self.cursor_pressed_img.get_rect()
+
+    def run(self, seed=None):
+        self.difficulty_selected = False
+        while not self.difficulty_selected:
+            self.input_manager.update()
+            self.render()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return "End"
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        self.resume_selected = True
+            if self.difficulty_selected:
+                #self.countdown()
+                return "Resume"
+
+    def render(self):
+        win = pygame.Surface((self.screen_width, self.screen_height))
+        win.blit(self.menu_screen, (0, 0))
+        if self.input_manager.is_mouse_holding:
+            self.cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
+            win.blit(self.cursor_pressed_img, self.cursor_pressed_img_rect)  # draw the cursor
+        else:
+            self.cursor_img_rect.center = pygame.mouse.get_pos()  # update position
+            win.blit(self.cursor_img, self.cursor_img_rect)  # draw the cursor
+        self.window.blit(win, win.get_rect())
+
+        # Draw label
+        label_surface = self.label_font.render(self.label_text, True, self.label_color)
+        label_rect = label_surface.get_rect(topleft=(self.label_pos_x, self.label_pos_y))
+        win.blit(label_surface, label_rect)
+
+        # Draw buttons
+        for i in range(10):
+            button_pos_x = self.start_x + (self.button_width + self.button_margin) * i
+            button_rect = pygame.Rect(button_pos_x, self.button_pos_y, self.button_width, self.button_height)
+            pygame.draw.rect(win, self.button_color, button_rect)
+
+            button_text = str(i + 1)  # Button label from 1 to 10
+            button_text_surface = self.button_font.render(button_text, True, self.button_text_color)
+            button_text_rect = button_text_surface.get_rect(center=button_rect.center)
+            win.blit(button_text_surface, button_text_rect)
+
+        pygame.event.pump()
+        pygame.display.update()
+
 
     @staticmethod
     def _apply_whiteness(win):
