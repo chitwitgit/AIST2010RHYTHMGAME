@@ -118,7 +118,7 @@ class TapPattern:
         if self.pressed:
             return False
         time_difference = t - self.t
-        relative_time_difference = time_difference / self.lifetime
+        relative_time_difference = time_difference / 120
         if -0.4 < relative_time_difference < 0.2:  # allow for early clicks but don't register clicks that are too late
             # Get the current mouse position
             mouse_pos = input_manager.mouse_pos
@@ -155,7 +155,7 @@ class TapPattern:
 
     def render_based_on_time(self, win, t):
         time_difference = t - self.t
-        relative_time_difference = time_difference / self.lifetime
+        relative_time_difference = time_difference / 120
         draw_approach_circle(win, self.point, relative_time_difference, self.thickness, self.stroke_width, self.approach_rate)
 
     def render_based_on_pressed(self, win, t):
@@ -234,7 +234,7 @@ class SliderPattern(ABC):
             else:
                 return False
         time_difference = t - self.starting_t
-        relative_time_difference = time_difference / self.lifetime
+        relative_time_difference = time_difference / 120
         if abs(relative_time_difference) < 0.3:
             # Get the current mouse position
             mouse_pos = input_manager.mouse_pos
@@ -311,7 +311,7 @@ class SliderPattern(ABC):
 
         if not self.pressed:
             time_difference = t - self.starting_t
-            relative_time_difference = time_difference / self.lifetime
+            relative_time_difference = time_difference / 120
             draw_approach_circle(win, self.starting_point, relative_time_difference, self.thickness, self.stroke_width,
                                  self.approach_rate)
 
