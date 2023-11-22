@@ -154,10 +154,11 @@ class PatternManager:
     def render_patterns(self, win, t):
         for pattern in self.pattern_queue:
             if pattern.render(win, t):  # past its lifetime
-                isHit = self.pattern_queue[0].pressed
+                pattern = self.pattern_queue[0]
+                isHit = pattern.pressed
                 self.patterns = self.patterns[1:]
                 self.pattern_queue = self.pattern_queue[1:]
                 if self.queue_length < len(self.patterns):
                     self.pattern_queue.append(self.patterns[self.queue_length])
-                return isHit
+                return isHit and pattern.score > 0
         return True
