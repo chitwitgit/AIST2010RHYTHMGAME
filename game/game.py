@@ -103,6 +103,7 @@ class GameScene:
             'approach_rate': approach_rate,
             'steps': self.steps,
             'combo': 0,
+            'highest_combo': 0,
             'perfect_count': 0,
             'miss_count': 0,
         }
@@ -314,6 +315,8 @@ class GameScene:
         # rendering objects
         isMissed = not self.pattern_manager.render_patterns(win, self.steps)
         if isMissed:
+            if self.data["combo"] > self.data["highest_combo"]:
+                self.data["highest_combo"] = self.data["combo"]
             self.data["combo"] = 0
             miss_count = self.data["miss_count"]
             miss_count += 1
