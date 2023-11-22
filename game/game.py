@@ -62,7 +62,26 @@ class GameScene:
         self.real_time_steps = 0
         self.fps = 60
         self.seed = 777
+
         self.points = 0
+        self.perfect_count = 0
+        self.good_count = 0
+        self.miss_count = 0
+        self.perfect_score = 100
+        self.good_score = 50
+        self.miss_score = -20
+        self.combo = 0
+        self.color = (255,255,255)
+        self.font = pygame.font.Font(None, 32)
+        self.combo_text = "Combo: {}".format(self.combo)
+        self.combo_label = self.font.render(self.combo_text, True, (255, 255, 255))
+        self.combo_label_rect = self.combo_label.get_rect()
+        self.combo_label_rect.bottomleft = (10, self.screen_height - 10)
+        self.score_text = "Score: {}".format(self.points)
+        self.score_label = self.font.render(self.score_text, True, (255, 255, 255))
+        self.score_label_rect = self.score_label.get_rect()
+        self.score_label_rect.topright = (self.screen_width - 10, 10)
+
         self.audio_file_full_path = None
         self.pattern_manager = None
         self.mode = "debug"
@@ -81,7 +100,7 @@ class GameScene:
 
     def initialize(self):
         random.seed(self.seed)
-        self.load_assets(keep_files=True, use_new_files=True)
+        self.load_assets(keep_files=True, use_new_files=False)
 
         if self.clock is None:
             self.clock = pygame.time.Clock()
@@ -236,6 +255,18 @@ class GameScene:
         else:
             self.cursor_img_rect.center = pygame.mouse.get_pos()  # update position
             win.blit(self.cursor_img, self.cursor_img_rect)  # draw the cursor
+
+        self.score_text = "Score: {}".format(self.points)
+        self.score_label = self.font.render(self.score_text, True, (255, 255, 255))
+        self.score_label_rect = self.score_label.get_rect()
+        self.score_label_rect.topright = (self.screen_width - 10, 10)
+        win.blit(self.score_label, self.score_label_rect) # score printing
+
+        self.combo_text = "Combo: {}".format(self.combo)
+        self.combo_label = self.font.render(self.combo_text, True, (255, 255, 255))
+        self.combo_label_rect = self.combo_label.get_rect()
+        self.combo_label_rect.bottomleft = (10, self.screen_height - 10)
+        win.blit(self.combo_label, self.combo_label_rect)  # combo printing
 
         # render window buffer to screen
         self.window.blit(win, win.get_rect())
