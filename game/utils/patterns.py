@@ -71,6 +71,7 @@ class TapPattern:
         self.starting_point = point
         self.ending_point = point
         self.approach_rate = approach_rate
+        self.score = 0
 
     def __repr__(self):
         return f"TapPattern(point={self.point}, radius={self.radius}, stroke_width={self.stroke_width}, " \
@@ -96,7 +97,16 @@ class TapPattern:
         self._prerendered_frame = downsampled_surface
 
     def update(self, t, input_manager):
-        self.check_mouse(t, input_manager)
+        mouse_clicked = self.check_mouse(t, input_manager)
+        if mouse_clicked:
+            time_difference = t - self.t
+            relative_time_difference = time_difference / self.lifetime
+            rounded_relative_time_difference = np.around(relative_time_difference, 2)
+            score = 100 * min(max(1.4 - 10 * abs(rounded_relative_time_difference), 0), 1)
+            score = np.around(score / 10, 0) * 10  # round to nearest ten
+            self.score += score
+            return score
+        return 0
 
     def check_mouse(self, t, input_manager):
         if self.pressed:
@@ -143,6 +153,11 @@ class TapPattern:
         time_difference = t - self.press_time
         relative_time_difference = time_difference / self.lifetime
         draw_clicked_circle(win, self.point, relative_time_difference, self.thickness, self.stroke_width)
+        font = pygame.font.Font(None, 25)  # Font for the countdown numbers
+        countdown_text = font.render(str(int(self.score)), True, (255, 255, 255))
+        countdown_text_rect = countdown_text.get_rect(center=self.point)
+        win.blit(countdown_text, countdown_text_rect)
+
         return abs(relative_time_difference) > 0.6
 
 
@@ -164,6 +179,8 @@ class SliderPattern(ABC):
         self.pressed = False
         self.press_time = 0
         self.approach_rate = approach_rate
+        self.score = 0
+        self.last_pressed = None
 
     @abstractmethod
     def _compute_coordinate(self, t):
@@ -174,11 +191,39 @@ class SliderPattern(ABC):
         pass
 
     def update(self, t, input_manager):
-        self.check_mouse(t, input_manager)
+        already_pressed = self.pressed
+        mouse_clicked = self.check_mouse(t, input_manager)
+        if mouse_clicked:
+            if not already_pressed:
+                time_difference = t - self.starting_t
+                relative_time_difference = time_difference / self.lifetime
+                rounded_relative_time_difference = np.around(relative_time_difference, 2)
+                score = 100 * min(max(1.4 - 10 * abs(rounded_relative_time_difference), 0), 1)
+                score = np.around(score / 10, 0) * 10  # round to nearest ten
+                self.score += score
+                return score
+            else:
+                # only add scores for sliding during the sliding time
+                if self.starting_t <= t <= self.ending_t:
+                    score = 2
+                    self.score += score
+
+                    total_time = self.ending_t - self.starting_t
+                    p = (t - self.starting_t) / total_time
+                    p = max(0, min(p, 1))  # clamp
+                    self.last_pressed = self._compute_coordinate(p)
+                    return score
+        return 0
 
     def check_mouse(self, t, input_manager):
         if self.pressed:
-            return False
+            mouse_pos = input_manager.mouse_pos
+            # more lenient on the position for sliding
+            is_inside_circle = np.linalg.norm(np.asarray(mouse_pos) - self.starting_point) < self.thickness * 2
+            if is_inside_circle and input_manager.is_user_holding:  # inside the circle and is clicking
+                return True
+            else:
+                return False
         time_difference = t - self.starting_t
         relative_time_difference = time_difference / self.lifetime
         if abs(relative_time_difference) < 0.3:
@@ -267,6 +312,13 @@ class SliderPattern(ABC):
         time_difference = t - self.press_time
         relative_time_difference = time_difference / self.lifetime
         draw_clicked_circle(win, self.starting_point, relative_time_difference, self.thickness, self.stroke_width)
+        font = pygame.font.Font(None, 25)
+        countdown_text = font.render(str(int(self.score)), True, (255, 255, 255))
+
+        if self.last_pressed is None:
+            self.last_pressed = self.starting_point
+        countdown_text_rect = countdown_text.get_rect(center=tuple(self.last_pressed))
+        win.blit(countdown_text, countdown_text_rect)
         return abs(relative_time_difference) > 0.6
 
     def draw_tracing_circle(self, win, t, hollow=False):
