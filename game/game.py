@@ -13,7 +13,7 @@ youtube_link = "https://www.youtube.com/watch?v=fnAy9nlRuZs"
 # youtube_link = "https://www.youtube.com/watch?v=vS_a8Edde8k"
 youtube_link = "https://www.youtube.com/watch?v=xtfXl7TZTac"
 given_tempo = 130
-difficulty = 8      # usually (0, 10]
+difficulty = 1      # usually (0, 10]
 approach_rate = 10   # must be >0, usually [1, 10]
 
 
@@ -250,7 +250,13 @@ class GameScene:
             self.input_manager.update()
             self.steps += 1
             score = self.data["score"]
-            score += self.pattern_manager.update_patterns(self.steps, self.input_manager)
+            temp_score = self.pattern_manager.update_patterns(self.steps, self.input_manager)
+            score += temp_score
+            print(temp_score)
+            if (temp_score):
+                combo = self.data['combo']
+                combo += 1
+                self.data['combo'] = combo
             self.data["score"] = score
 
     def render(self):
