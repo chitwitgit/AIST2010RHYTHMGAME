@@ -42,20 +42,31 @@ class Game:
         self.menu_scene = None
         self.screen_width = 800
         self.screen_height = 450
+        self.data = {
+            'difficulty': difficulty,
+            'score': 0,
+            'approach_rate': approach_rate,
+            'combo': 0,
+            'highest_combo': 0,
+            'perfect_count': 0,
+            'miss_count': 0,
+        }
         pygame.init()
         pygame.display.init()
         self.window = pygame.display.set_mode((self.screen_width, self.screen_height),
                                               pygame.HWSURFACE | pygame.DOUBLEBUF)
 
-        self.game_scene = GameScene(self.window)
+        self.game_scene = GameScene(self.window, self.data)
         self.pause_scene = PauseScene(self.window, None)
         self.current_scene = self.game_scene
-        self.menu_scene = MenuScene(self.window)
+        self.menu_scene = MenuScene(self.window, self.data)
 
 
     def run(self, seed=None):
         running = True
         while running:
+            state = self.current_scene.run(seed)
+            #self.menu()
             state = self.current_scene.run(seed)
             if state == "Pause":
                 self.pause_game()
@@ -87,7 +98,7 @@ class Game:
 
 
 class GameScene:
-    def __init__(self, window):
+    def __init__(self, window, data):
         self.screen_width = 800
         self.screen_height = 450
 
@@ -97,18 +108,9 @@ class GameScene:
         self.real_time_steps = 0
         self.fps = 60
         self.seed = 777
-        self.data = {
-            'difficulty': difficulty,
-            'score': 0,
-            'approach_rate': approach_rate,
-            'steps': self.steps,
-            'combo': 0,
-            'highest_combo': 0,
-            'perfect_count': 0,
-            'miss_count': 0,
-        }
         self.color = (255, 255, 255)
         self.font = pygame.font.Font(None, 32)
+        self.data = data
         self.combo_text = "Combo: {}".format(self.data['combo'])
         self.combo_label = self.font.render(self.combo_text, True, (255, 255, 255))
         self.combo_label_rect = self.combo_label.get_rect()
@@ -441,13 +443,14 @@ class PauseScene:
 
 
 class MenuScene:
-    def __init__(self, window):
+    def __init__(self, window, data):
         self.difficulty_selected = False
         self.window = window
         self.screen_width, self.screen_height = window.get_size()
-        self.menu_screen = self.window.fill((0, 0, 0))
         self.input_manager = InputManager()
         self.clock = pygame.time.Clock()
+
+        self.data = data
 
         # Define label properties
         self.difficulty_label_text = "Difficulty:"
@@ -482,7 +485,7 @@ class MenuScene:
     def run(self, seed=None):
         self.difficulty_selected = False
         self.approach_rate = False
-        while not self.difficulty_selected or not self.approach_rate:
+        while not (self.difficulty_selected or self.approach_rate):
             self.input_manager.update()
             self.render()
             for event in pygame.event.get():
@@ -495,8 +498,9 @@ class MenuScene:
                 return "Resume"
 
     def render(self):
+        print("In Menu")
         win = pygame.Surface((self.screen_width, self.screen_height))
-        win.blit(self.menu_screen, (0, 0))
+        win.fill((0, 0, 0))
         if self.input_manager.is_mouse_holding:
             self.cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
             win.blit(self.cursor_pressed_img, self.cursor_pressed_img_rect)  # draw the cursor
@@ -517,7 +521,7 @@ class MenuScene:
             pygame.draw.rect(win, self.button_color, button_rect)
 
             if button_rect.collidepoint(pygame.mouse.get_pos()):
-                if self.input_manager.get_mouse_down(1):  # Left mouse button pressed
+                if self.input_manager.is_mouse_clicked:  # Left mouse button pressed
                     self.difficulty_selected = True
                     self.data['difficulty'] = i + 1
 
@@ -539,8 +543,8 @@ class MenuScene:
             pygame.draw.rect(win, self.button_color, button_rect)
 
             if button_rect.collidepoint(pygame.mouse.get_pos()):
-                if self.input_manager.get_mouse_down(1):  # Left mouse button pressed
-                    self.difficulty_selected = True
+                if self.input_manager.is_mouse_clicked:  # Left mouse button pressed
+                    self.approach_rate_selected = True
                     self.data['approach rate'] = i + 1
 
             button_text = str(i + 1)  # Button label from 1 to 10
