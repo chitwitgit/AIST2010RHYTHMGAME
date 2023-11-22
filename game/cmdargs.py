@@ -16,6 +16,9 @@ parser.add_argument('-d', "--difficulty", type=float,
 parser.add_argument('-a', "--ar", type=float,
                     help="Circle approach rate",
                     default=None)
+parser.add_argument('-y', "--youtube", type=str,
+                    help="YouTube link for the music video",
+                    default=None)
 
 args = parser.parse_args()
 print(args)

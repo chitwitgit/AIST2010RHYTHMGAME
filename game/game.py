@@ -7,16 +7,31 @@ from utils import notedetection
 from utils.youtubeDL import download_youtube_audio
 from utils.input_manager import InputManager
 import os
+import sys
+from cmdargs import args
 
-youtube_link = "https://www.youtube.com/watch?v=HFPBd_mQYhg"
-youtube_link = "https://www.youtube.com/watch?v=fnAy9nlRuZs"
-youtube_link = "https://www.youtube.com/watch?v=vS_a8Edde8k"
-youtube_link = "https://www.youtube.com/watch?v=xtfXl7TZTac"
-youtube_link = "https://www.youtube.com/watch?v=dWYSPKowfAU"
 
-given_tempo = 130
-difficulty = 8      # usually (0, 10]
-approach_rate = 10   # must be >0, usually [1, 10]
+if args.youtube is not None:
+    youtube_link = args.youtube
+else:
+    youtube_link = "https://www.youtube.com/watch?v=HFPBd_mQYhg"
+    youtube_link = "https://www.youtube.com/watch?v=fnAy9nlRuZs"
+    # youtube_link = "https://www.youtube.com/watch?v=vS_a8Edde8k"
+    # youtube_link = "https://www.youtube.com/watch?v=xtfXl7TZTac"
+    # youtube_link = "https://www.youtube.com/watch?v=dWYSPKowfAU"
+
+if args.tempo is not None:
+    given_tempo = args.tempo
+else:
+    given_tempo = 130
+if args.difficulty is not None:
+    difficulty = args.difficulty
+else:
+    difficulty = 8  # usually (0, 10]
+if args.ar is not None:
+    approach_rate = args.ar
+else:
+    approach_rate = 10  # must be >0, usually [1, 10]
 
 
 class Game:
@@ -50,7 +65,7 @@ class Game:
             if state == "Stop Game":
                 self.close()
                 running = False
-            if state == "End": # add end screen if needed
+            if state == "End":  # add end screen if needed
                 self.close()
                 running = False
 
@@ -118,15 +133,16 @@ class GameScene:
         self.cursor_pressed_img_rect = None
 
         self.pattern_manager = PatternManager(self.screen_width, self.screen_height, self.fps, self.seed,
-                                              difficulty=self.data["difficulty"], approach_rate=self.data["approach_rate"])
+                                              difficulty=self.data["difficulty"],
+                                              approach_rate=self.data["approach_rate"])
         self.window_buffer = None
 
         self.initialize()
 
     def initialize(self):
         random.seed(self.seed)
-        # self.load_assets(keep_files=True, use_new_files=True)   # if you want to try a new song
-        self.load_assets(keep_files=True, use_new_files=False)  # if same song which has been downloaded
+        self.load_assets(keep_files=True, use_new_files=True)   # if you want to try a new song
+        # self.load_assets(keep_files=True, use_new_files=False)  # if same song which has been downloaded
 
         if self.clock is None:
             self.clock = pygame.time.Clock()
@@ -177,7 +193,8 @@ class GameScene:
             background = pygame.image.load("data/images/furina.jpg").convert()
             self.background = pygame.transform.smoothscale(background, (self.screen_width, self.screen_height))
 
-        if os.path.exists(onset_times_file) and os.path.exists(onset_durations_file) and os.path.exists(onset_bars_file) and os.path.exists(tempo_file):
+        if os.path.exists(onset_times_file) and os.path.exists(onset_durations_file) and os.path.exists(
+                onset_bars_file) and os.path.exists(tempo_file):
             onset_times = np.load(onset_times_file)
             onset_durations = np.load(onset_durations_file)
             onset_bars = np.load(onset_bars_file)
@@ -244,7 +261,7 @@ class GameScene:
                     mixer.music.play()  # Start music playback
                     self.game_started = True
                 if self.game_started and (not mixer.music.get_busy()):
-                    return "End" # Stop the game loop when music finishes playing
+                    return "End"  # Stop the game loop when music finishes playing
                 self.render()
             else:
                 pygame.mixer.music.pause()
@@ -268,7 +285,7 @@ class GameScene:
                 perfect_count = self.data['perfect_count']
                 perfect_count += 1
                 self.data['perfect_count'] = perfect_count
-                #print(f"Perfect Count: {perfect_count}")
+                # print(f"Perfect Count: {perfect_count}")
             self.data["score"] = score
 
     def render(self):
@@ -404,6 +421,7 @@ class PauseScene:
             pygame.display.update()
             self.clock.tick(fps)
 
+
 class MenuScene:
     def __init__(self, window):
         self.difficulty_selected = False
@@ -451,7 +469,7 @@ class MenuScene:
                     if event.key == pygame.K_ESCAPE:
                         self.resume_selected = True
             if self.difficulty_selected:
-                #self.countdown()
+                # self.countdown()
                 return "Resume"
 
     def render(self):
@@ -483,7 +501,6 @@ class MenuScene:
 
         pygame.event.pump()
         pygame.display.update()
-
 
     @staticmethod
     def _apply_whiteness(win):
