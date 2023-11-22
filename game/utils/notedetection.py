@@ -154,11 +154,10 @@ def onset_roundings(onset_times, onset_durations, tempo, precision=0.125):
         # cube root is used to decrease the effect of outliers
 
         if alignment_error < best_error:
-            aligned_onset_durations = np.around(onset_durations / spb, decimals=0) * spb
-            valid_mask = onset_durations > 0
-            best_alignment = (aligned_onset_times[valid_mask], aligned_onset_durations[valid_mask])
+            aligned_onset_durations = np.around(np.array(onset_durations) / spb, decimals=0) * spb
+            valid_mask = aligned_onset_durations > 0
+            best_alignment = (np.array(aligned_onset_times), np.array(aligned_onset_durations))
             best_error = alignment_error
-
     return best_alignment
 
 
@@ -225,10 +224,9 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512, tempo=None):
         onset_durations = onset_length_detection(x, y, onset_samples, sr=fs)
 
         onset_times, onset_durations = remove_noisy_onset(onset_times, onset_durations, x, sr=fs)
-
+        onset_times, onset_durations = merge_close_onset(onset_times, onset_durations, tempo)
 
         onset_times, onset_durations = onset_roundings(onset_times, onset_durations, tempo)
-        onset_times, onset_durations = merge_close_onset(onset_times, onset_durations, tempo)
         # onset_times, onset_durations = onset_paddings(onset_times, onset_durations, tempo, np.abs(x), sr=fs)
 
         onset_list.append(onset_times)
@@ -309,7 +307,7 @@ def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=
         satisfaction = np.ones((onset_samples.shape[0]))
 
         # compute distribution difference
-        satisfaction = np.logical_and(satisfaction, diff < 3e-5)
+        satisfaction = np.logical_and(satisfaction, diff < 6)
 
         # check change in max frequency peak
         satisfaction = np.logical_and(satisfaction, np.abs(new_peaks - old_peaks) <= tolerance)
