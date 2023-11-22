@@ -10,8 +10,10 @@ import os
 
 youtube_link = "https://www.youtube.com/watch?v=HFPBd_mQYhg"
 youtube_link = "https://www.youtube.com/watch?v=fnAy9nlRuZs"
-# youtube_link = "https://www.youtube.com/watch?v=vS_a8Edde8k"
+youtube_link = "https://www.youtube.com/watch?v=vS_a8Edde8k"
 youtube_link = "https://www.youtube.com/watch?v=xtfXl7TZTac"
+youtube_link = "https://www.youtube.com/watch?v=dWYSPKowfAU"
+
 given_tempo = 130
 difficulty = 1      # usually (0, 10]
 approach_rate = 10   # must be >0, usually [1, 10]
@@ -94,7 +96,7 @@ class GameScene:
 
         self.audio_file_full_path = None
         self.pattern_manager = None
-        self.mode = "debug"
+        self.mode = "debug x"
         self.debug_colors = None
         self.click_sound_effect = None
         self.music_data = None
@@ -117,7 +119,7 @@ class GameScene:
     def initialize(self):
         random.seed(self.seed)
         # self.load_assets(keep_files=True, use_new_files=True)   # if you want to try a new song
-        self.load_assets(keep_files=True, use_new_files=False)  # if same song which has been downloaded
+        self.load_assets(keep_files=True, use_new_files=True)  # if same song which has been downloaded
 
         if self.clock is None:
             self.clock = pygame.time.Clock()
@@ -252,7 +254,7 @@ class GameScene:
             score = self.data["score"]
             temp_score = self.pattern_manager.update_patterns(self.steps, self.input_manager)
             score += temp_score
-            if temp_score >= 2:
+            if temp_score > 2:
                 combo = self.data['combo']
                 combo += 1
                 self.data['combo'] = combo
