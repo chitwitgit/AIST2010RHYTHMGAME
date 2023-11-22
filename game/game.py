@@ -65,8 +65,8 @@ class Game:
     def run(self, seed=None):
         running = True
         while running:
-            state = self.current_scene.run(seed)
-            #self.menu()
+            #state = self.current_scene.run(seed)
+            self.menu()
             state = self.current_scene.run(seed)
             if state == "Pause":
                 self.pause_game()
@@ -444,7 +444,7 @@ class PauseScene:
 
 class MenuScene:
     def __init__(self, window, data):
-        self.difficulty_selected = False
+        self.start_click = False
         self.window = window
         self.screen_width, self.screen_height = window.get_size()
         self.input_manager = InputManager()
@@ -455,27 +455,29 @@ class MenuScene:
         # Define label properties
         self.difficulty_label_text = "Difficulty:"
         self.approach_rate_label_text = "Approach Rate:"
+        self.start_label_text = "START"
+        self.menu_label_text = "MENU"
         self.label_font = pygame.font.Font(None, 36)
         self.label_color = (255, 255, 255)  # White color
 
         # Define button properties
-        self.button_width, self.button_height = 70, 30
-        self.button_margin = 10
-        self.button_color = (0, 255, 0)  # Green color
-        self.button_font = pygame.font.Font(None, 24)
+        self.button_width, self.button_height = 30, 30
+        self.button_margin = 5
+        self.button_color = (0, 0, 0)
+        self.button_font = pygame.font.Font(None, 30)
         self.button_text_color = (255, 255, 255)  # White color
 
         # Calculate total width for buttons and margins
         self.total_width = (self.button_width + self.button_margin) * 10 - self.button_margin
-        self.start_x = (self.screen_width - self.total_width) // 2
-        self.difficulty_button_pos_y = (self.screen_height - self.button_height) // 3
-        self.approach_rate_button_pos_y = (self.screen_height - self.button_height) // 3 * 2
+        self.start_x = 300
+        self.difficulty_button_pos_y = (self.screen_height - self.button_height) // 3 + 25
+        self.approach_rate_button_pos_y = (self.screen_height - self.button_height) // 3 * 2 - 25
 
         # Calculate label position
         self.difficulty_label_pos_x = self.start_x - self.label_font.size(self.difficulty_label_text)[0] - 10
         self.approach_rate_label_pos_x = self.start_x - self.label_font.size(self.approach_rate_label_text)[0] - 10
-        self.difficulty_label_pos_y = (self.screen_height - self.label_font.size(self.difficulty_label_text)[1]) // 3
-        self.approach_rate_label_pos_y = (self.screen_height - self.label_font.size(self.approach_rate_label_text)[1]) // 3 * 2
+        self.difficulty_label_pos_y = (self.screen_height - self.label_font.size(self.difficulty_label_text)[1]) // 3 + 25
+        self.approach_rate_label_pos_y = (self.screen_height - self.label_font.size(self.approach_rate_label_text)[1]) // 3 * 2 - 25
 
         self.cursor_img = pygame.image.load('data/images/cursor.png').convert_alpha()
         self.cursor_img_rect = self.cursor_img.get_rect()
@@ -483,31 +485,23 @@ class MenuScene:
         self.cursor_pressed_img_rect = self.cursor_pressed_img.get_rect()
 
     def run(self, seed=None):
-        self.difficulty_selected = False
-        self.approach_rate = False
-        while not (self.difficulty_selected or self.approach_rate):
+        while not self.start_click:
             self.input_manager.update()
             self.render()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     return "End"
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        self.resume_selected = True
-            if self.difficulty_selected and self.approach_rate:
+            if self.start_click:
                 return "Resume"
 
     def render(self):
-        print("In Menu")
         win = pygame.Surface((self.screen_width, self.screen_height))
         win.fill((0, 0, 0))
-        if self.input_manager.is_mouse_holding:
-            self.cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
-            win.blit(self.cursor_pressed_img, self.cursor_pressed_img_rect)  # draw the cursor
-        else:
-            self.cursor_img_rect.center = pygame.mouse.get_pos()  # update position
-            win.blit(self.cursor_img, self.cursor_img_rect)  # draw the cursor
-        self.window.blit(win, win.get_rect())
+
+        # Menu button
+        label_surface = self.label_font.render(self.menu_label_text, True, self.label_color)
+        label_rect = label_surface.get_rect(center=(self.screen_width // 2, 100))
+        win.blit(label_surface, label_rect)
 
         # Draw difficulty label
         label_surface = self.label_font.render(self.difficulty_label_text, True, self.label_color)
@@ -522,7 +516,6 @@ class MenuScene:
 
             if button_rect.collidepoint(pygame.mouse.get_pos()):
                 if self.input_manager.is_mouse_clicked:  # Left mouse button pressed
-                    self.difficulty_selected = True
                     self.data['difficulty'] = i + 1
 
             button_text = str(i + 1)  # Button label from 1 to 10
@@ -544,14 +537,30 @@ class MenuScene:
 
             if button_rect.collidepoint(pygame.mouse.get_pos()):
                 if self.input_manager.is_mouse_clicked:  # Left mouse button pressed
-                    self.approach_rate_selected = True
-                    self.data['approach rate'] = i + 1
+                    self.data['approach_rate'] = i + 1
 
             button_text = str(i + 1)  # Button label from 1 to 10
             button_text_surface = self.button_font.render(button_text, True, self.button_text_color)
             button_text_rect = button_text_surface.get_rect(center=button_rect.center)
             win.blit(button_text_surface, button_text_rect)
 
+        # Start button
+        button_surface = self.label_font.render(self.start_label_text, True, self.label_color)
+        button_rect = button_surface.get_rect(bottomright=(self.screen_width - 25, self.screen_height - 25))
+        win.blit(button_surface, button_rect)
+
+        if button_rect.collidepoint(pygame.mouse.get_pos()):
+            if self.input_manager.is_mouse_clicked:  # Left mouse button pressed
+                self.start_click = True
+
+        if self.input_manager.is_mouse_holding:
+            self.cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
+            win.blit(self.cursor_pressed_img, self.cursor_pressed_img_rect)  # draw the cursor
+        else:
+            self.cursor_img_rect.center = pygame.mouse.get_pos()  # update position
+            win.blit(self.cursor_img, self.cursor_img_rect)  # draw the cursor
+
+        self.window.blit(win, win.get_rect())
         pygame.event.pump()
         pygame.display.update()
 
