@@ -12,6 +12,8 @@ youtube_link = "https://www.youtube.com/watch?v=HFPBd_mQYhg"
 youtube_link = "https://www.youtube.com/watch?v=fnAy9nlRuZs&ab_channel=KotoriFridayBass%F0%9F%85%A5"
 youtube_link = "https://www.youtube.com/watch?v=vS_a8Edde8k"
 given_tempo = 180
+difficulty = 1
+approach_rate = 2.5
 
 
 class Game:
@@ -67,9 +69,9 @@ class GameScene:
         self.fps = 60
         self.seed = 777
         self.data = {
-            'difficulty': 1,
+            'difficulty': difficulty,
             'score': 0,
-            'approach_rate': 2.5,
+            'approach_rate': approach_rate,
             'steps': self.steps
         }
         self.audio_file_full_path = None

@@ -86,7 +86,7 @@ class PatternManager:
             color = (random.randint(50, 255), random.randint(50, 255), random.randint(50, 255))
             if pattern_type == "TapPattern":
                 position = np.array([random.uniform(0, self.screen_width), random.uniform(0, self.screen_height)])
-                tap = TapPattern(position, self.radius, self.stroke_width, color, t, self.lifetime, 2.5)
+                tap = TapPattern(position, self.radius, self.stroke_width, color, t, self.lifetime, self.approach_rate)
                 self.add_pattern(tap)
             elif pattern_type == "Line":
                 starting_t = t
