@@ -282,7 +282,7 @@ class GameScene:
             score = self.data["score"]
             temp_score = self.pattern_manager.update_patterns(self.steps, self.input_manager)
             score += temp_score
-            if temp_score > 2:
+            if temp_score >= 10:
                 combo = self.data['combo']
                 combo += 1
                 self.data['combo'] = combo
@@ -425,6 +425,16 @@ class PauseScene:
             pygame.event.pump()
             pygame.display.update()
             self.clock.tick(fps)
+
+    @staticmethod
+    def _apply_whiteness(win):
+        whiteness = 100
+
+        tmp = pygame.Surface(win.get_size())
+        tmp.fill((whiteness, whiteness, whiteness))
+
+        # Blit the temporary surface onto the original surface
+        win.blit(tmp, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
 
 
 class MenuScene:
