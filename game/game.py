@@ -252,7 +252,7 @@ class GameScene:
             score = self.data["score"]
             temp_score = self.pattern_manager.update_patterns(self.steps, self.input_manager)
             score += temp_score
-            if (temp_score):
+            if temp_score >= 2:
                 combo = self.data['combo']
                 combo += 1
                 self.data['combo'] = combo
@@ -371,7 +371,6 @@ class PauseScene:
             self.cursor_img_rect.center = pygame.mouse.get_pos()  # update position
             win.blit(self.cursor_img, self.cursor_img_rect)  # draw the cursor
         self.window.blit(win, win.get_rect())
-
         pygame.event.pump()
         pygame.display.update()
 
