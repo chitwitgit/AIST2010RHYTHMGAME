@@ -447,7 +447,8 @@ class MenuScene:
         self.clock = pygame.time.Clock()
 
         # Define label properties
-        self.label_text = "Difficulty"
+        self.difficulty_label_text = "Difficulty:"
+        self.approach_rate_label_text = "Approach Rate:"
         self.label_font = pygame.font.Font(None, 36)
         self.label_color = (255, 255, 255)  # White color
 
@@ -457,16 +458,18 @@ class MenuScene:
         self.button_color = (0, 255, 0)  # Green color
         self.button_font = pygame.font.Font(None, 24)
         self.button_text_color = (255, 255, 255)  # White color
-        self.button_states = [False] * 10
 
         # Calculate total width for buttons and margins
         self.total_width = (self.button_width + self.button_margin) * 10 - self.button_margin
         self.start_x = (self.screen_width - self.total_width) // 2
-        self.button_pos_y = (self.screen_height - self.button_height) // 2
+        self.difficulty_button_pos_y = (self.screen_height - self.button_height) // 3
+        self.approach_rate_button_pos_y = (self.screen_height - self.button_height) // 3 * 2
 
         # Calculate label position
-        self.label_pos_x = self.start_x - self.label_font.size(self.label_text)[0] - 10
-        self.label_pos_y = (self.screen_height - self.label_font.size(self.label_text)[1]) // 2
+        self.difficulty_label_pos_x = self.start_x - self.label_font.size(self.difficulty_label_text)[0] - 10
+        self.approach_rate_label_pos_x = self.start_x - self.label_font.size(self.approach_rate_label_text)[0] - 10
+        self.difficulty_label_pos_y = (self.screen_height - self.label_font.size(self.difficulty_label_text)[1]) // 3
+        self.approach_rate_label_pos_y = (self.screen_height - self.label_font.size(self.approach_rate_label_text)[1]) // 3 * 2
 
         self.cursor_img = pygame.image.load('data/images/cursor.png').convert_alpha()
         self.cursor_img_rect = self.cursor_img.get_rect()
@@ -475,7 +478,8 @@ class MenuScene:
 
     def run(self, seed=None):
         self.difficulty_selected = False
-        while not self.difficulty_selected:
+        self.approach_rate = False
+        while not self.difficulty_selected or not self.approach_rate:
             self.input_manager.update()
             self.render()
             for event in pygame.event.get():
@@ -484,8 +488,7 @@ class MenuScene:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         self.resume_selected = True
-            if self.difficulty_selected:
-                # self.countdown()
+            if self.difficulty_selected and self.approach_rate:
                 return "Resume"
 
     def render(self):
@@ -499,21 +502,43 @@ class MenuScene:
             win.blit(self.cursor_img, self.cursor_img_rect)  # draw the cursor
         self.window.blit(win, win.get_rect())
 
-        # Draw label
-        label_surface = self.label_font.render(self.label_text, True, self.label_color)
-        label_rect = label_surface.get_rect(topleft=(self.label_pos_x, self.label_pos_y))
+        # Draw difficulty label
+        label_surface = self.label_font.render(self.difficulty_label_text, True, self.label_color)
+        label_rect = label_surface.get_rect(topleft=(self.difficulty_label_pos_x, self.difficulty_label_pos_y))
         win.blit(label_surface, label_rect)
 
-        # Draw buttons
+        # Draw difficulty buttons
         for i in range(10):
             button_pos_x = self.start_x + (self.button_width + self.button_margin) * i
-            button_rect = pygame.Rect(button_pos_x, self.button_pos_y, self.button_width, self.button_height)
+            button_rect = pygame.Rect(button_pos_x, self.difficulty_button_pos_y, self.button_width, self.button_height)
             pygame.draw.rect(win, self.button_color, button_rect)
 
             if button_rect.collidepoint(pygame.mouse.get_pos()):
                 if self.input_manager.get_mouse_down(1):  # Left mouse button pressed
                     self.difficulty_selected = True
-                    self.data['difficulty'] = i
+                    self.data['difficulty'] = i + 1
+
+            button_text = str(i + 1)  # Button label from 1 to 10
+            button_text_surface = self.button_font.render(button_text, True, self.button_text_color)
+            button_text_rect = button_text_surface.get_rect(center=button_rect.center)
+            win.blit(button_text_surface, button_text_rect)
+
+        # Draw approach rate label
+        label_surface = self.label_font.render(self.approach_rate_label_text, True, self.label_color)
+        label_rect = label_surface.get_rect(topleft=(self.approach_rate_label_pos_x, self.approach_rate_label_pos_y))
+        win.blit(label_surface, label_rect)
+
+        # Draw approach rate buttons
+        for i in range(10):
+            button_pos_x = self.start_x + (self.button_width + self.button_margin) * i
+            button_rect = pygame.Rect(button_pos_x, self.approach_rate_button_pos_y, self.button_width,
+                                      self.button_height)
+            pygame.draw.rect(win, self.button_color, button_rect)
+
+            if button_rect.collidepoint(pygame.mouse.get_pos()):
+                if self.input_manager.get_mouse_down(1):  # Left mouse button pressed
+                    self.difficulty_selected = True
+                    self.data['approach rate'] = i + 1
 
             button_text = str(i + 1)  # Button label from 1 to 10
             button_text_surface = self.button_font.render(button_text, True, self.button_text_color)
