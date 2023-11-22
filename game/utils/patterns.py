@@ -100,7 +100,7 @@ class TapPattern:
         mouse_clicked = self.check_mouse(t, input_manager)
         if mouse_clicked:
             time_difference = t - self.t
-            relative_time_difference = time_difference / self.lifetime
+            relative_time_difference = time_difference / 120
             rounded_relative_time_difference = np.around(relative_time_difference, 2)
             score = 100 * min(max(1.4 - 10 * abs(rounded_relative_time_difference), 0), 1)
             score = np.around(score / 10, 0) * 10  # round to nearest ten
@@ -196,7 +196,7 @@ class SliderPattern(ABC):
         if mouse_clicked:
             if not already_pressed:
                 time_difference = t - self.starting_t
-                relative_time_difference = time_difference / self.lifetime
+                relative_time_difference = time_difference / 120
                 rounded_relative_time_difference = np.around(relative_time_difference, 2)
                 score = 100 * min(max(1.4 - 10 * abs(rounded_relative_time_difference), 0), 1)
                 score = np.around(score / 10, 0) * 10  # round to nearest ten
