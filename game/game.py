@@ -426,6 +426,16 @@ class PauseScene:
             pygame.display.update()
             self.clock.tick(fps)
 
+    @staticmethod
+    def _apply_whiteness(win):
+        whiteness = 100
+
+        tmp = pygame.Surface(win.get_size())
+        tmp.fill((whiteness, whiteness, whiteness))
+
+        # Blit the temporary surface onto the original surface
+        win.blit(tmp, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
+
 
 class MenuScene:
     def __init__(self, window):
