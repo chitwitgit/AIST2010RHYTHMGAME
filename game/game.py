@@ -52,6 +52,7 @@ class Game:
         self.current_scene = self.game_scene
         self.menu_scene = MenuScene(self.window)
 
+
     def run(self, seed=None):
         running = True
         while running:
@@ -115,6 +116,9 @@ class GameScene:
         self.score_label = self.font.render(self.score_text, True, (255, 255, 255))
         self.score_label_rect = self.score_label.get_rect()
         self.score_label_rect.topright = (self.screen_width - 10, 10)
+
+        self.tap_sound_effect = mixer.Sound('data/audio/sound_effects/normal-hitnormal.ogg')
+        self.tap_sound_effect.set_volume(0.3)   # set volume
 
         self.audio_file_full_path = None
         self.pattern_manager = None
@@ -286,6 +290,7 @@ class GameScene:
                 perfect_count += 1
                 self.data['perfect_count'] = perfect_count
                 # print(f"Perfect Count: {perfect_count}")
+                self.tap_sound_effect.play()
             self.data["score"] = score
 
     def render(self):
