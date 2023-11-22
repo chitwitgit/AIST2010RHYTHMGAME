@@ -283,7 +283,16 @@ class GameScene:
             self.cursor_img_rect.center = pygame.mouse.get_pos()  # update position
             win.blit(self.cursor_img, self.cursor_img_rect)  # draw the cursor
 
+        # print cumulative score and combo
+        self.score_text = "Score: {}".format(self.data['score'])
+        self.score_label = self.font.render(self.score_text, True, (255, 255, 255))
+        self.score_label_rect = self.score_label.get_rect()
+        self.score_label_rect.topright = (self.screen_width - 10, 10)
         win.blit(self.score_label, self.score_label_rect)
+        self.combo_text = "Combo: {}".format(self.data['combo'])
+        self.combo_label = self.font.render(self.combo_text, True, (255, 255, 255))
+        self.combo_label_rect = self.combo_label.get_rect()
+        self.combo_label_rect.bottomleft = (10, self.screen_height - 10)
         win.blit(self.combo_label, self.combo_label_rect)
 
         # render window buffer to screen
