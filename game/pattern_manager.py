@@ -3,36 +3,42 @@ from utils.patterns import *
 
 
 class PatternManager:
-    def __init__(self, screen_width, screen_height, fps, seed, difficulty):
+    def __init__(self, screen_width, screen_height, fps, seed, difficulty, approach_rate):
         self.screen_width = screen_width
         self.screen_height = screen_height
         self.fps = fps
-        self.radius = 25
         self.stroke_width = 5
-        self.lifetime = 180
         self.seed = seed
 
         self.patterns = []
         self.pattern_queue = None
-        self.queue_length = 8
+        self.queue_length = 12
+        self.approach_rate = approach_rate
+
+        # difficulty dependent variables such as circle size and approach rate
+        self.radius = 50 - (difficulty - 1) * 2.5
+        self.lifetime = 245 - approach_rate * 17.5
 
     def generate_map(self, music_data):
-        onset_times, onset_durations, *_ = music_data
+        onset_times, onset_durations, onset_bars, *_ = music_data
         onset_time_frames = [int(i * self.fps) for i in onset_times]
         onset_duration_frames = [int(i * self.fps) for i in onset_durations]
+        # print(onset_time_frames)
+        # print(onset_duration_frames)
+        # print(onset_bars)
         # self.generate_random_patterns(100)
-        self.generate_patterns(onset_time_frames, onset_duration_frames)
+        self.generate_patterns(onset_time_frames, onset_duration_frames, onset_bars)
         self.pattern_queue = self.patterns[:self.queue_length]
         return
 
     # This is a primitive approach
-    def generate_patterns(self, onset_time_frames, onset_duration_frames):
+    def generate_patterns(self, onset_time_frames, onset_duration_frames, onset_bars):
         # make the seed dependent on the input audio in some way
         seed_add = sum(onset_duration_frames)
         random.seed(self.seed + seed_add)
         last_onset_time = 0
         for onset_time, onset_duration in zip(onset_time_frames, onset_duration_frames):
-            if onset_time - last_onset_time < 20:
+            if onset_time - last_onset_time < 10:
                 continue
             last_onset_time = onset_time
             pattern_type = random.choice(["TapPattern", "TapPattern", "TapPattern", "TapPattern", "TapPattern",
@@ -44,13 +50,13 @@ class PatternManager:
             color = (random.randint(150, 255), random.randint(150, 255), random.randint(150, 255))
             if pattern_type == "TapPattern":
                 position = np.array([random.uniform(0, self.screen_width), random.uniform(0, self.screen_height)])
-                tap = TapPattern(position, self.radius, self.stroke_width, color, t, self.lifetime)
+                tap = TapPattern(position, self.radius, self.stroke_width, color, t, self.lifetime, self.approach_rate)
                 self.add_pattern(tap)
             elif pattern_type == "Line":
                 position1 = np.array([random.uniform(0, self.screen_width), random.uniform(0, self.screen_height)])
                 position2 = np.array([random.uniform(0, self.screen_width), random.uniform(0, self.screen_height)])
                 line = Line(self.radius, self.stroke_width, position1, position2, color, starting_t, ending_t,
-                            self.lifetime, length=100)
+                            self.lifetime, self.approach_rate, length=100)
                 self.add_pattern(line)
                 last_onset_time = ending_t
             elif pattern_type == "CubicBezier":
@@ -59,7 +65,7 @@ class PatternManager:
                 position3 = np.array([random.uniform(0, self.screen_width), random.uniform(0, self.screen_height)])
                 position4 = np.array([random.uniform(0, self.screen_width), random.uniform(0, self.screen_height)])
                 curve = CubicBezier(self.radius, self.stroke_width, position1, position2, position3, position4, color,
-                                    starting_t, ending_t, self.lifetime, length=100)
+                                    starting_t, ending_t, self.lifetime, self.approach_rate, length=100)
                 self.add_pattern(curve)
                 last_onset_time = ending_t
             else:
@@ -70,7 +76,7 @@ class PatternManager:
                 curve_radius = random.uniform(dist / 1.7, dist / 1.05)
                 curve_radius *= random.choice([-1, 1])  # negative curve radius inverts the curve direction
                 curve = Arc(self.radius, self.stroke_width, position1, position2, curve_radius, color, starting_t,
-                            ending_t, self.lifetime, length=100)
+                            ending_t, self.lifetime, self.approach_rate, length=100)
                 self.add_pattern(curve)
                 last_onset_time = ending_t
 
@@ -82,7 +88,7 @@ class PatternManager:
             color = (random.randint(50, 255), random.randint(50, 255), random.randint(50, 255))
             if pattern_type == "TapPattern":
                 position = np.array([random.uniform(0, self.screen_width), random.uniform(0, self.screen_height)])
-                tap = TapPattern(position, self.radius, self.stroke_width, color, t, self.lifetime)
+                tap = TapPattern(position, self.radius, self.stroke_width, color, t, self.lifetime, self.approach_rate)
                 self.add_pattern(tap)
             elif pattern_type == "Line":
                 starting_t = t
@@ -132,13 +138,18 @@ class PatternManager:
             pattern.prerender(win)
 
     def update_patterns(self, t, input_manager):
+        score_earned = 0
         for pattern in self.pattern_queue:
-            pattern.update(t, input_manager)
+            score_earned += pattern.update(t, input_manager)
+        return score_earned
 
     def render_patterns(self, win, t):
         for pattern in self.pattern_queue:
             if pattern.render(win, t):  # past its lifetime
+                isHit = self.pattern_queue[0].pressed
                 self.patterns = self.patterns[1:]
                 self.pattern_queue = self.pattern_queue[1:]
                 if self.queue_length < len(self.patterns):
                     self.pattern_queue.append(self.patterns[self.queue_length])
+                return isHit
+        return True

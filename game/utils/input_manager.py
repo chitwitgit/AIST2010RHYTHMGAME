@@ -31,7 +31,7 @@ class InputManager:
         return (
             self.mouse_state[0] and not self.prev_mouse_state[0] or
             self.keys[pygame.K_x] and not self.prev_keys[pygame.K_x] or
-            self.keys[pygame.K_y] and not self.prev_keys[pygame.K_y]
+            self.keys[pygame.K_z] and not self.prev_keys[pygame.K_z]
         )
 
     @property
@@ -39,5 +39,5 @@ class InputManager:
         return (
             self.mouse_state[0] or
             self.keys[pygame.K_x] or
-            self.keys[pygame.K_y]
+            self.keys[pygame.K_z]
         )
