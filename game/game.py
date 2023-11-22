@@ -14,7 +14,7 @@ youtube_link = "https://www.youtube.com/watch?v=fnAy9nlRuZs"
 youtube_link = "https://www.youtube.com/watch?v=xtfXl7TZTac"
 given_tempo = 130
 difficulty = 8      # usually (0, 10]
-approach_rate = 5   # must be >0, usually (0, 10]
+approach_rate = 1   # must be >0, usually [1, 10]
 
 
 class Game:

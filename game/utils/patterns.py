@@ -15,7 +15,7 @@ def apply_alpha(surf, alpha):
 
 @lru_cache
 def circle_surface(color, color_inner, thickness, stroke_width, scaling_factor):
-    surface_size = 200
+    surface_size = 500
     surface = pygame.Surface((surface_size, surface_size), pygame.SRCALPHA)
     pygame.draw.circle(surface, color,
                        (surface_size // 2, surface_size // 2),
@@ -31,7 +31,7 @@ def draw_approach_circle(win, point, relative_time_difference, thickness, stroke
     if abs(relative_time_difference) >= approach_constant:
         return
     else:
-        scaling_factor = 1 + 500 * (-relative_time_difference) / approach_constant
+        scaling_factor = 1 + (410 - (approach_rate - 1) * 40) * (-relative_time_difference) / approach_constant
     alpha = (
         255 - 255 * 1 / approach_constant ** 2 * relative_time_difference ** 2
         if relative_time_difference < 0
