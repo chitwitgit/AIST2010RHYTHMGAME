@@ -289,7 +289,7 @@ class GameScene:
                 perfect_count = self.data['perfect_count']
                 perfect_count += 1
                 self.data['perfect_count'] = perfect_count
-                # print(f"Perfect Count: {perfect_count}")
+                #print(f"Perfect Count: {perfect_count}")
                 self.tap_sound_effect.play()
             self.data["score"] = score
 
@@ -457,6 +457,7 @@ class MenuScene:
         self.button_color = (0, 255, 0)  # Green color
         self.button_font = pygame.font.Font(None, 24)
         self.button_text_color = (255, 255, 255)  # White color
+        self.button_states = [False] * 10
 
         # Calculate total width for buttons and margins
         self.total_width = (self.button_width + self.button_margin) * 10 - self.button_margin
@@ -508,6 +509,11 @@ class MenuScene:
             button_pos_x = self.start_x + (self.button_width + self.button_margin) * i
             button_rect = pygame.Rect(button_pos_x, self.button_pos_y, self.button_width, self.button_height)
             pygame.draw.rect(win, self.button_color, button_rect)
+
+            if button_rect.collidepoint(pygame.mouse.get_pos()):
+                if self.input_manager.get_mouse_down(1):  # Left mouse button pressed
+                    self.difficulty_selected = True
+                    self.data['difficulty'] = i
 
             button_text = str(i + 1)  # Button label from 1 to 10
             button_text_surface = self.button_font.render(button_text, True, self.button_text_color)
