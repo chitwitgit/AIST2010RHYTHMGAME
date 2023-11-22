@@ -434,6 +434,7 @@ class CubicBezier(SliderPattern):
                f"P1={self.P1}, P2={self.P2}, P3={self.P3}, color={self.color}, " \
                f"starting_t={self.starting_t}, ending_t={self.ending_t}, lifetime={self.lifetime}, no. points = {self.N})"
 
+    # we use interpolation to create the feeling that the pattern is sliding uniformly
     def _compute_coordinate(self, t):
         target_length = t * self.length
         if target_length <= 0:
