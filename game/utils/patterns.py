@@ -5,17 +5,23 @@ from abc import ABC, abstractmethod
 from functools import lru_cache
 
 
+@lru_cache(maxsize=None)  # cache commonly used operations to speed up performance
+def create_alpha_surface(size, alpha):
+    surf = pygame.Surface(size, pygame.SRCALPHA)
+    surf.fill((255, 255, 255, alpha))
+    return surf
+
+
 def apply_alpha(surf, alpha):
-    tmp = pygame.Surface(surf.get_size(), pygame.SRCALPHA)
-    tmp.fill((255, 255, 255, alpha))
+    tmp = create_alpha_surface(surf.get_size(), alpha)
     frame = surf.copy()
     frame.blit(tmp, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
     return frame
 
 
-@lru_cache
+@lru_cache(maxsize=None)
 def circle_surface(color, color_inner, thickness, stroke_width, scaling_factor):
-    surface_size = 500
+    surface_size = max((int(thickness * scaling_factor) + 1), 1) * 2
     surface = pygame.Surface((surface_size, surface_size), pygame.SRCALPHA)
     pygame.draw.circle(surface, color,
                        (surface_size // 2, surface_size // 2),
@@ -112,7 +118,7 @@ class TapPattern:
         if self.pressed:
             return False
         time_difference = t - self.t
-        relative_time_difference = time_difference / self.lifetime
+        relative_time_difference = time_difference / 120
         if -0.4 < relative_time_difference < 0.2:  # allow for early clicks but don't register clicks that are too late
             # Get the current mouse position
             mouse_pos = input_manager.mouse_pos
@@ -137,8 +143,11 @@ class TapPattern:
         alpha = max(0, min(alpha, 255))  # Clamp alpha between 0 and 255
         if alpha == 0:
             return t >= self.t
-        frame = apply_alpha(self._prerendered_frame, alpha)
-        win.blit(frame, (0, 0))
+        if alpha < 255:
+            frame = apply_alpha(self._prerendered_frame, alpha)
+            win.blit(frame, (0, 0))
+        else:
+            win.blit(self._prerendered_frame, (0, 0))
         # render more stuff here if needed
 
         self.render_based_on_time(win, t)
@@ -146,7 +155,7 @@ class TapPattern:
 
     def render_based_on_time(self, win, t):
         time_difference = t - self.t
-        relative_time_difference = time_difference / self.lifetime
+        relative_time_difference = time_difference / 120
         draw_approach_circle(win, self.point, relative_time_difference, self.thickness, self.stroke_width, self.approach_rate)
 
     def render_based_on_pressed(self, win, t):
@@ -225,7 +234,7 @@ class SliderPattern(ABC):
             else:
                 return False
         time_difference = t - self.starting_t
-        relative_time_difference = time_difference / self.lifetime
+        relative_time_difference = time_difference / 120
         if abs(relative_time_difference) < 0.3:
             # Get the current mouse position
             mouse_pos = input_manager.mouse_pos
@@ -302,7 +311,7 @@ class SliderPattern(ABC):
 
         if not self.pressed:
             time_difference = t - self.starting_t
-            relative_time_difference = time_difference / self.lifetime
+            relative_time_difference = time_difference / 120
             draw_approach_circle(win, self.starting_point, relative_time_difference, self.thickness, self.stroke_width,
                                  self.approach_rate)
 
