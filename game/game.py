@@ -13,7 +13,7 @@ youtube_link = "https://www.youtube.com/watch?v=fnAy9nlRuZs"
 # youtube_link = "https://www.youtube.com/watch?v=vS_a8Edde8k"
 youtube_link = "https://www.youtube.com/watch?v=xtfXl7TZTac"
 given_tempo = 130
-difficulty = 1      # usually (0, 10]
+difficulty = 8      # usually (0, 10]
 approach_rate = 10   # must be >0, usually [1, 10]
 
 
@@ -252,11 +252,14 @@ class GameScene:
             score = self.data["score"]
             temp_score = self.pattern_manager.update_patterns(self.steps, self.input_manager)
             score += temp_score
-            print(temp_score)
             if (temp_score):
                 combo = self.data['combo']
                 combo += 1
                 self.data['combo'] = combo
+                perfect_count = self.data['perfect_count']
+                perfect_count += 1
+                self.data['perfect_count'] = perfect_count
+                #print(f"Perfect Count: {perfect_count}")
             self.data["score"] = score
 
     def render(self):
@@ -281,6 +284,9 @@ class GameScene:
         isMissed = not self.pattern_manager.render_patterns(win, self.steps)
         if isMissed:
             self.data["combo"] = 0
+            miss_count = self.data["miss_count"]
+            miss_count += 1
+            self.data["miss_count"] = miss_count
         self.window_buffer.blit(win, (0, 0))
         if self.input_manager.is_user_holding:
             self.cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
@@ -365,6 +371,7 @@ class PauseScene:
             self.cursor_img_rect.center = pygame.mouse.get_pos()  # update position
             win.blit(self.cursor_img, self.cursor_img_rect)  # draw the cursor
         self.window.blit(win, win.get_rect())
+
         pygame.event.pump()
         pygame.display.update()
 
