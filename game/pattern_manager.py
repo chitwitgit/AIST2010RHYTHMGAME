@@ -3,7 +3,7 @@ from utils.patterns import *
 
 
 class PatternManager:
-    def __init__(self, screen_width, screen_height, fps, seed, difficulty):
+    def __init__(self, screen_width, screen_height, fps, seed, difficulty, approach_rate):
         self.screen_width = screen_width
         self.screen_height = screen_height
         self.fps = fps
@@ -15,6 +15,7 @@ class PatternManager:
         self.patterns = []
         self.pattern_queue = None
         self.queue_length = 8
+        self.approach_rate = approach_rate
 
     def generate_map(self, music_data):
         onset_times, onset_durations, onset_bars, *_ = music_data
@@ -47,13 +48,13 @@ class PatternManager:
             color = (random.randint(150, 255), random.randint(150, 255), random.randint(150, 255))
             if pattern_type == "TapPattern":
                 position = np.array([random.uniform(0, self.screen_width), random.uniform(0, self.screen_height)])
-                tap = TapPattern(position, self.radius, self.stroke_width, color, t, self.lifetime)
+                tap = TapPattern(position, self.radius, self.stroke_width, color, t, self.lifetime, self.approach_rate)
                 self.add_pattern(tap)
             elif pattern_type == "Line":
                 position1 = np.array([random.uniform(0, self.screen_width), random.uniform(0, self.screen_height)])
                 position2 = np.array([random.uniform(0, self.screen_width), random.uniform(0, self.screen_height)])
                 line = Line(self.radius, self.stroke_width, position1, position2, color, starting_t, ending_t,
-                            self.lifetime, length=100)
+                            self.lifetime, self.approach_rate, length=100)
                 self.add_pattern(line)
                 last_onset_time = ending_t
             elif pattern_type == "CubicBezier":
@@ -62,7 +63,7 @@ class PatternManager:
                 position3 = np.array([random.uniform(0, self.screen_width), random.uniform(0, self.screen_height)])
                 position4 = np.array([random.uniform(0, self.screen_width), random.uniform(0, self.screen_height)])
                 curve = CubicBezier(self.radius, self.stroke_width, position1, position2, position3, position4, color,
-                                    starting_t, ending_t, self.lifetime, length=100)
+                                    starting_t, ending_t, self.lifetime, self.approach_rate, length=100)
                 self.add_pattern(curve)
                 last_onset_time = ending_t
             else:
@@ -73,7 +74,7 @@ class PatternManager:
                 curve_radius = random.uniform(dist / 1.7, dist / 1.05)
                 curve_radius *= random.choice([-1, 1])  # negative curve radius inverts the curve direction
                 curve = Arc(self.radius, self.stroke_width, position1, position2, curve_radius, color, starting_t,
-                            ending_t, self.lifetime, length=100)
+                            ending_t, self.lifetime, self.approach_rate, length=100)
                 self.add_pattern(curve)
                 last_onset_time = ending_t
 
@@ -85,7 +86,7 @@ class PatternManager:
             color = (random.randint(50, 255), random.randint(50, 255), random.randint(50, 255))
             if pattern_type == "TapPattern":
                 position = np.array([random.uniform(0, self.screen_width), random.uniform(0, self.screen_height)])
-                tap = TapPattern(position, self.radius, self.stroke_width, color, t, self.lifetime)
+                tap = TapPattern(position, self.radius, self.stroke_width, color, t, self.lifetime, 2.5)
                 self.add_pattern(tap)
             elif pattern_type == "Line":
                 starting_t = t

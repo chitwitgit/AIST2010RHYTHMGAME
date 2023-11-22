@@ -26,12 +26,11 @@ def circle_surface(color, color_inner, thickness, stroke_width, scaling_factor):
     return surface
 
 
-def draw_approach_circle(win, point, relative_time_difference, thickness, stroke_width):
-    approach_rate = 2.5
+def draw_approach_circle(win, point, relative_time_difference, thickness, stroke_width, approach_rate):
     approach_constant = 1 / approach_rate
     if abs(relative_time_difference) >= approach_constant:
         return
-    scaling_factor = 1 - 3.5 * relative_time_difference
+    scaling_factor = 1 - approach_rate * 1.25 * relative_time_difference
     alpha = (
         255 - 255 * 1 / approach_constant ** 2 * relative_time_difference ** 2
         if relative_time_difference < 0
@@ -57,7 +56,7 @@ def draw_clicked_circle(win, point, relative_time_difference, thickness, stroke_
 
 
 class TapPattern:
-    def __init__(self, point, radius, stroke_width, color, t, lifetime):
+    def __init__(self, point, radius, stroke_width, color, t, lifetime, approach_rate):
         self.point = point
         self.color = color
         self.radius = radius
@@ -70,6 +69,7 @@ class TapPattern:
         self.press_time = 0
         self.starting_point = point
         self.ending_point = point
+        self.approach_rate = approach_rate
 
     def __repr__(self):
         return f"TapPattern(point={self.point}, radius={self.radius}, stroke_width={self.stroke_width}, " \
@@ -136,7 +136,7 @@ class TapPattern:
     def render_based_on_time(self, win, t):
         time_difference = t - self.t
         relative_time_difference = time_difference / self.lifetime
-        draw_approach_circle(win, self.point, relative_time_difference, self.thickness, self.stroke_width)
+        draw_approach_circle(win, self.point, relative_time_difference, self.thickness, self.stroke_width, self.approach_rate)
 
     def render_based_on_pressed(self, win, t):
         time_difference = t - self.press_time
@@ -146,8 +146,8 @@ class TapPattern:
 
 
 class SliderPattern(ABC):
-    def __init__(self, radius, stroke_width, starting_point,
-                 ending_point, color, vertices, vertices_outer, starting_t, ending_t, lifetime):
+    def __init__(self, radius, stroke_width, starting_point, ending_point, color, vertices, vertices_outer, starting_t,
+                 ending_t, lifetime, approach_rate):
         self.starting_point = starting_point
         self.ending_point = ending_point
         self.radius = radius
@@ -162,6 +162,7 @@ class SliderPattern(ABC):
         self._prerendered_frame = None
         self.pressed = False
         self.press_time = 0
+        self.approach_rate = approach_rate
 
     @abstractmethod
     def _compute_coordinate(self, t):
@@ -256,7 +257,8 @@ class SliderPattern(ABC):
         if not self.pressed:
             time_difference = t - self.starting_t
             relative_time_difference = time_difference / self.lifetime
-            draw_approach_circle(win, self.starting_point, relative_time_difference, self.thickness, self.stroke_width)
+            draw_approach_circle(win, self.starting_point, relative_time_difference, self.thickness, self.stroke_width,
+                                 self.approach_rate)
 
     def render_based_on_pressed(self, win, t):
         if not self.pressed:
@@ -285,7 +287,7 @@ class SliderPattern(ABC):
 
 
 class Line(SliderPattern):
-    def __init__(self, radius, stroke_width, P0, P1, color, starting_t, ending_t, lifetime, length=-1):
+    def __init__(self, radius, stroke_width, P0, P1, color, starting_t, ending_t, lifetime, approach_rate, length=-1):
         self.radius = radius
         self.stroke_width = stroke_width
         self.thickness = radius + self.stroke_width
@@ -301,8 +303,9 @@ class Line(SliderPattern):
 
         self.vertices = self._compute_vertices(self.radius)
         self.vertices_outer = self._compute_vertices(self.thickness)
-        super().__init__(radius, stroke_width, self.P0, self.P1, color,
-                         self.vertices, self.vertices_outer, starting_t, ending_t, lifetime)
+        self.approach_rate = approach_rate
+        super().__init__(radius, stroke_width, self.P0, self.P1, color, self.vertices, self.vertices_outer, starting_t,
+                         ending_t, lifetime, self.approach_rate)
 
     def __repr__(self):
         return f"LineSlider(radius={self.radius}, stroke_width={self.stroke_width}, P0={self.P0}, P1={self.P1}, " \
@@ -326,7 +329,7 @@ class Line(SliderPattern):
 
 
 class CubicBezier(SliderPattern):
-    def __init__(self, radius, stroke_width, P0, P1, P2, P3, color, starting_t, ending_t, lifetime, length=-1):
+    def __init__(self, radius, stroke_width, P0, P1, P2, P3, color, starting_t, ending_t, lifetime, approach_rate, length=-1):
         self.radius = radius
         self.stroke_width = stroke_width
         self.thickness = radius + self.stroke_width
@@ -360,8 +363,9 @@ class CubicBezier(SliderPattern):
         self.normals = self._compute_normals()
         self.vertices = self._compute_vertices(self.radius)
         self.vertices_outer = self._compute_vertices(self.thickness)
-        super().__init__(radius, stroke_width, self.P0, self.P3, color,
-                         self.vertices, self.vertices_outer, starting_t, ending_t, lifetime)
+        self.approach_rate = approach_rate
+        super().__init__(radius, stroke_width, self.P0, self.P3, color, self.vertices, self.vertices_outer, starting_t,
+                         ending_t, lifetime, self.approach_rate)
 
     def __repr__(self):
         return f"CubicBezierSlider(radius={self.radius}, stroke_width={self.stroke_width}, P0={self.P0}, " \
@@ -438,7 +442,7 @@ class CubicBezier(SliderPattern):
 
 class Arc(SliderPattern):
     def __init__(self, radius, stroke_width, starting_point, ending_point, curve_radius, color, starting_t, ending_t,
-                 lifetime, length=-1):
+                 lifetime, approach_rate, length=-1):
         self.radius = radius
         self.stroke_width = stroke_width
         self.thickness = radius + self.stroke_width
@@ -466,8 +470,9 @@ class Arc(SliderPattern):
         self.normals = self._compute_normals()
         self.vertices = self._compute_vertices(self.radius)
         self.vertices_outer = self._compute_vertices(self.thickness)
-        super().__init__(radius, stroke_width, self.starting_point, self.ending_point, color,
-                         self.vertices, self.vertices_outer, starting_t, ending_t, lifetime)
+        self.approach_rate = approach_rate
+        super().__init__(radius, stroke_width, self.starting_point, self.ending_point, color, self.vertices,
+                         self.vertices_outer, starting_t, ending_t, lifetime, self.approach_rate)
 
     def __repr__(self):
         return f"ArcSlider(radius={self.radius}, stroke_width={self.stroke_width}, starting_point={self.starting_point}, " \

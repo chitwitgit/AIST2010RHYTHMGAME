@@ -12,6 +12,8 @@ youtube_link = "https://www.youtube.com/watch?v=HFPBd_mQYhg"
 youtube_link = "https://www.youtube.com/watch?v=fnAy9nlRuZs&ab_channel=KotoriFridayBass%F0%9F%85%A5"
 youtube_link = "https://www.youtube.com/watch?v=vS_a8Edde8k"
 given_tempo = 180
+
+
 class Game:
     def __init__(self):
         self.game_scene = None
@@ -64,7 +66,12 @@ class GameScene:
         self.real_time_steps = 0
         self.fps = 60
         self.seed = 777
-        self.points = 0
+        self.data = {
+            'difficulty': 1,
+            'score': 0,
+            'approach_rate': 2.5,
+            'steps': self.steps
+        }
         self.audio_file_full_path = None
         self.pattern_manager = None
         self.mode = "debug"
@@ -81,14 +88,15 @@ class GameScene:
         self.cursor_pressed_img = None
         self.cursor_pressed_img_rect = None
 
-        self.pattern_manager = PatternManager(self.screen_width, self.screen_height, self.fps, self.seed, difficulty=1)
+        self.pattern_manager = PatternManager(self.screen_width, self.screen_height, self.fps, self.seed,
+                                              difficulty=self.data["difficulty"], approach_rate=self.data["approach_rate"])
         self.window_buffer = None
 
         self.initialize()
 
     def initialize(self):
         random.seed(self.seed)
-        self.load_assets(keep_files=True, use_new_files=True)
+        self.load_assets(keep_files=True, use_new_files=False)
 
         if self.clock is None:
             self.clock = pygame.time.Clock()
@@ -100,7 +108,7 @@ class GameScene:
         if self.mode == "debug":
             self.debug_mode_setup()
 
-    def load_assets(self, keep_files=True, use_new_files=True):
+    def load_assets(self, keep_files=True, use_new_files=False):
         file_path = os.path.join("data", "audio")
         file_name = "audio.mp3"
         self.audio_file_full_path = os.path.join(file_path, file_name)
