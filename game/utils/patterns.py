@@ -27,10 +27,11 @@ def circle_surface(color, color_inner, thickness, stroke_width, scaling_factor):
 
 
 def draw_approach_circle(win, point, relative_time_difference, thickness, stroke_width, approach_rate):
-    approach_constant = 1 / approach_rate
+    approach_constant = 100 / approach_rate
     if abs(relative_time_difference) >= approach_constant:
         return
-    scaling_factor = 1 - approach_rate * 1.25 * relative_time_difference
+    else:
+        scaling_factor = 1 + 500 * (-relative_time_difference) / approach_constant
     alpha = (
         255 - 255 * 1 / approach_constant ** 2 * relative_time_difference ** 2
         if relative_time_difference < 0

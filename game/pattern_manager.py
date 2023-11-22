@@ -7,15 +7,17 @@ class PatternManager:
         self.screen_width = screen_width
         self.screen_height = screen_height
         self.fps = fps
-        self.radius = 25
         self.stroke_width = 5
-        self.lifetime = 180
         self.seed = seed
 
         self.patterns = []
         self.pattern_queue = None
         self.queue_length = 8
         self.approach_rate = approach_rate
+
+        # difficulty dependent variables such as circle size and approach rate
+        self.radius = 50 - (difficulty - 1) * 2.5
+        self.lifetime = 245 - approach_rate * 17.5
 
     def generate_map(self, music_data):
         onset_times, onset_durations, onset_bars, *_ = music_data

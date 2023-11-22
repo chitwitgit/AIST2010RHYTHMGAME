@@ -9,11 +9,12 @@ from utils.input_manager import InputManager
 import os
 
 youtube_link = "https://www.youtube.com/watch?v=HFPBd_mQYhg"
-youtube_link = "https://www.youtube.com/watch?v=fnAy9nlRuZs&ab_channel=KotoriFridayBass%F0%9F%85%A5"
-youtube_link = "https://www.youtube.com/watch?v=vS_a8Edde8k"
-given_tempo = 180
-difficulty = 1
-approach_rate = 2.5
+youtube_link = "https://www.youtube.com/watch?v=fnAy9nlRuZs"
+# youtube_link = "https://www.youtube.com/watch?v=vS_a8Edde8k"
+youtube_link = "https://www.youtube.com/watch?v=xtfXl7TZTac"
+given_tempo = 130
+difficulty = 8      # usually (0, 10]
+approach_rate = 5   # must be >0, usually (0, 10]
 
 
 class Game:
@@ -98,7 +99,8 @@ class GameScene:
 
     def initialize(self):
         random.seed(self.seed)
-        self.load_assets(keep_files=True, use_new_files=False)
+        # self.load_assets(keep_files=True, use_new_files=True)   # if you want to try a new song
+        self.load_assets(keep_files=True, use_new_files=False)  # if same song which has been downloaded
 
         if self.clock is None:
             self.clock = pygame.time.Clock()
