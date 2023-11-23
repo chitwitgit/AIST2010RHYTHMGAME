@@ -15,19 +15,16 @@ if args.youtube is not None:
     youtube_link = args.youtube
 else:
     youtube_link = "https://www.youtube.com/watch?v=HFPBd_mQYhg"
-    youtube_link = "https://www.youtube.com/watch?v=fnAy9nlRuZs"
-    # youtube_link = "https://www.youtube.com/watch?v=vS_a8Edde8k"
-    # youtube_link = "https://www.youtube.com/watch?v=xtfXl7TZTac"
-    # youtube_link = "https://www.youtube.com/watch?v=dWYSPKowfAU"
+    youtube_link = "https://www.youtube.com/watch?v=i0K40f-6mLs"
 
 if args.tempo is not None:
     given_tempo = args.tempo
 else:
-    given_tempo = 130
+    given_tempo = 76
 if args.difficulty is not None:
     difficulty = args.difficulty
 else:
-    difficulty = 8  # usually (0, 10]
+    difficulty = 2  # usually (0, 10]
 if args.ar is not None:
     approach_rate = args.ar
 else:
@@ -147,7 +144,7 @@ class GameScene:
 
     def initialize(self):
         random.seed(self.seed)
-        self.load_assets(keep_files=True, use_new_files=True)   # if you want to try a new song
+        self.load_assets(keep_files=True, use_new_files=False)   # if you want to try a new song
         # self.load_assets(keep_files=True, use_new_files=False)  # if same song which has been downloaded
 
         if self.clock is None:
@@ -205,7 +202,7 @@ class GameScene:
             onset_durations = np.load(onset_durations_file)
             onset_bars = np.load(onset_bars_file)
             tempo = np.load(tempo_file)
-            self.music_data = onset_times, onset_durations, int(tempo)
+            self.music_data = onset_times, onset_durations, onset_bars, int(tempo[0])
         else:
             self.music_data = notedetection.process_audio(self.audio_file_full_path, tempo=given_tempo)
             onset_times, onset_durations, onset_bars, tempo = self.music_data
@@ -494,6 +491,7 @@ class MenuScene:
                 return "Resume"
 
     def render(self):
+        pygame.mouse.set_visible(False)  # hides the cursor and will draw a cursor for playing rhythm game
         win = pygame.Surface((self.screen_width, self.screen_height))
         win.fill((0, 0, 0))
 
