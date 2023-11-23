@@ -10,12 +10,11 @@ import os
 import sys
 from cmdargs import args
 
-
 if args.youtube is not None:
     youtube_link = args.youtube
 else:
     youtube_link = "https://www.youtube.com/watch?v=HFPBd_mQYhg"
-    youtube_link = "https://www.youtube.com/watch?v=i0K40f-6mLs"
+    youtube_link = "https://www.youtube.com/watch?v=2c_lHmkOq0E"
 
 if args.tempo is not None:
     given_tempo = args.tempo
@@ -28,7 +27,7 @@ else:
 if args.ar is not None:
     approach_rate = args.ar
 else:
-    approach_rate = 10  # must be >0, usually [1, 10]
+    approach_rate = 7  # must be >0, usually [1, 10]
 
 
 class Game:
@@ -57,7 +56,6 @@ class Game:
         self.pause_scene = PauseScene(self.window, None)
         self.menu_scene = MenuScene(self.window, self.data)
         self.current_scene = self.menu_scene
-
 
     def run(self, seed=None):
         running = True
@@ -117,7 +115,7 @@ class GameScene:
         self.score_label_rect.topright = (self.screen_width - 10, 10)
 
         self.tap_sound_effect = mixer.Sound('data/audio/sound_effects/normal-hitnormal.ogg')
-        self.tap_sound_effect.set_volume(0.3)   # set volume
+        self.tap_sound_effect.set_volume(0.3)  # set volume
 
         self.audio_file_full_path = None
         self.pattern_manager = None
@@ -144,7 +142,7 @@ class GameScene:
 
     def initialize(self):
         random.seed(self.seed)
-        self.load_assets(keep_files=True, use_new_files=False)   # if you want to try a new song
+        self.load_assets(keep_files=True, use_new_files=False)  # if you want to try a new song
         # self.load_assets(keep_files=True, use_new_files=False)  # if same song which has been downloaded
 
         if self.clock is None:
@@ -288,7 +286,7 @@ class GameScene:
                 perfect_count = self.data['perfect_count']
                 perfect_count += 1
                 self.data['perfect_count'] = perfect_count
-                #print(f"Perfect Count: {perfect_count}")
+                # print(f"Perfect Count: {perfect_count}")
                 self.tap_sound_effect.play()
             self.data["score"] = score
 
@@ -472,8 +470,10 @@ class MenuScene:
         # Calculate label position
         self.difficulty_label_pos_x = self.start_x - self.label_font.size(self.difficulty_label_text)[0] - 10
         self.approach_rate_label_pos_x = self.start_x - self.label_font.size(self.approach_rate_label_text)[0] - 10
-        self.difficulty_label_pos_y = (self.screen_height - self.label_font.size(self.difficulty_label_text)[1]) // 3 + 25
-        self.approach_rate_label_pos_y = (self.screen_height - self.label_font.size(self.approach_rate_label_text)[1]) // 3 * 2 - 25
+        self.difficulty_label_pos_y = (self.screen_height - self.label_font.size(self.difficulty_label_text)[
+            1]) // 3 + 25
+        self.approach_rate_label_pos_y = (self.screen_height - self.label_font.size(self.approach_rate_label_text)[
+            1]) // 3 * 2 - 25
 
         self.cursor_img = pygame.image.load('data/images/cursor.png').convert_alpha()
         self.cursor_img_rect = self.cursor_img.get_rect()
@@ -560,6 +560,7 @@ class MenuScene:
         self.window.blit(win, win.get_rect())
         pygame.event.pump()
         pygame.display.update()
+
 
 def main():
     game = Game()

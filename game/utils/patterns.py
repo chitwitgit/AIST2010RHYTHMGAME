@@ -32,7 +32,7 @@ def circle_surface(color, color_inner, thickness, stroke_width, scaling_factor):
     return surface
 
 
-def draw_approach_circle(win, point, relative_time_difference, thickness, stroke_width, approach_rate):
+"""def draw_approach_circle(win, point, relative_time_difference, thickness, stroke_width, approach_rate):
     approach_constant = 100 / approach_rate
     if abs(relative_time_difference) >= approach_constant:
         return
@@ -47,13 +47,31 @@ def draw_approach_circle(win, point, relative_time_difference, thickness, stroke
     circle = circle_surface((255, 255, 255, alpha), (0, 0, 0, 0),
                             thickness, stroke_width, scaling_factor)
     rect = circle.get_rect(center=point)
+    win.blit(circle, rect)"""
+
+
+def draw_approach_circle(win, point, relative_time_difference, thickness, stroke_width, approach_rate):
+    approach_variable = 2 + np.cbrt(approach_rate)
+    approach_constant = 1 / approach_variable
+    if relative_time_difference > approach_constant:
+        return
+    scaling_factor = 1 - approach_variable * relative_time_difference
+    alpha = (
+        255 - 255 * 1 / approach_constant ** 3 * relative_time_difference ** 3
+        if relative_time_difference < 0
+        else 255 - 255 * 1 / np.sqrt(approach_constant) * np.sqrt(relative_time_difference)
+    )
+    alpha = min(max(alpha, 0), 255)
+    circle = circle_surface((255, 255, 255, alpha), (0, 0, 0, 0),
+                            thickness, stroke_width, scaling_factor)
+    rect = circle.get_rect(center=point)
     win.blit(circle, rect)
 
 
 def draw_clicked_circle(win, point, relative_time_difference, thickness, stroke_width):
     if abs(relative_time_difference) >= 0.3:
         return
-    scaling_factor = np.cbrt(1 + 8 * relative_time_difference)
+    scaling_factor = np.sqrt(1 + 8 * relative_time_difference)
     alpha = 255 - 255 * 1 / np.cbrt(0.3) * np.cbrt(relative_time_difference)
     alpha = min(max(alpha, 0), 255)
     circle = circle_surface((255, 255, 255, alpha), (0, 0, 0, 0),
@@ -111,8 +129,8 @@ class TapPattern:
             score = 100 * min(max(1.4 - 10 * abs(rounded_relative_time_difference), 0), 1)
             score = np.around(score / 10, 0) * 10  # round to nearest ten
             self.score += score
-            return score
-        return 0
+            return score, True
+        return 0, False
 
     def check_mouse(self, t, input_manager):
         if self.pressed:
@@ -155,8 +173,9 @@ class TapPattern:
 
     def render_based_on_time(self, win, t):
         time_difference = t - self.t
-        relative_time_difference = time_difference / 120
-        draw_approach_circle(win, self.point, relative_time_difference, self.thickness, self.stroke_width, self.approach_rate)
+        relative_time_difference = time_difference / self.lifetime
+        draw_approach_circle(win, self.point, relative_time_difference, self.thickness, self.stroke_width,
+                             self.approach_rate)
 
     def render_based_on_pressed(self, win, t):
         time_difference = t - self.press_time
@@ -210,7 +229,7 @@ class SliderPattern(ABC):
                 score = 100 * min(max(1.4 - 10 * abs(rounded_relative_time_difference), 0), 1)
                 score = np.around(score / 10, 0) * 10  # round to nearest ten
                 self.score += score
-                return score
+                return score, True
             else:
                 # only add scores for sliding during the sliding time
                 if self.starting_t <= t <= self.ending_t:
@@ -221,8 +240,8 @@ class SliderPattern(ABC):
                     p = (t - self.starting_t) / total_time
                     p = max(0, min(p, 1))  # clamp
                     self.last_pressed = self._compute_coordinate(p)
-                    return score
-        return 0
+                    return score, True
+        return 0, False
 
     def check_mouse(self, t, input_manager):
         if self.pressed:
@@ -311,7 +330,7 @@ class SliderPattern(ABC):
 
         if not self.pressed:
             time_difference = t - self.starting_t
-            relative_time_difference = time_difference / 120
+            relative_time_difference = time_difference / self.lifetime
             draw_approach_circle(win, self.starting_point, relative_time_difference, self.thickness, self.stroke_width,
                                  self.approach_rate)
 
@@ -391,7 +410,8 @@ class Line(SliderPattern):
 
 
 class CubicBezier(SliderPattern):
-    def __init__(self, radius, stroke_width, P0, P1, P2, P3, color, starting_t, ending_t, lifetime, approach_rate, length=-1):
+    def __init__(self, radius, stroke_width, P0, P1, P2, P3, color, starting_t, ending_t, lifetime, approach_rate,
+                 length=-1):
         self.radius = radius
         self.stroke_width = stroke_width
         self.thickness = radius + self.stroke_width
@@ -489,7 +509,6 @@ class CubicBezier(SliderPattern):
                 #  insert point between the points
                 new_points.append(actual_point)
                 new_ts.append(mid_t)
-                # print(f"subdivided point {mid_pt}")
                 finished = False
             new_points.append(point)
             new_ts.append(t)
@@ -597,7 +616,6 @@ class Arc(SliderPattern):
                 #  insert point between the points
                 new_points.append(actual_point)
                 new_ts.append(mid_t)
-                print(f"subdivided point {mid_pt}")
                 finished = False
             new_points.append(point)
             new_ts.append(t)
