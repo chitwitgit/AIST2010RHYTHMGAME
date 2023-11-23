@@ -87,6 +87,7 @@ class Game:
         self.current_scene = self.game_scene
 
     def menu(self):
+        self.menu_scene.start_click = False
         self.current_scene = self.menu_scene
 
     def close(self):
