@@ -45,6 +45,7 @@ class PatternManager:
         # make the seed dependent on the input audio in some way
         seed_add = sum(onset_duration_frames)
         random.seed(self.seed + seed_add)
+        np.random.seed(self.seed + seed_add)
 
         # preprocess the lists so they are zipped according to their bar numbers
         zipped_data = [(time, duration, bar) for time, duration, bar

@@ -9,6 +9,7 @@ from utils.input_manager import InputManager
 import os
 import sys
 from cmdargs import args
+from dataclasses import dataclass
 
 if args.youtube is not None:
     youtube_link = args.youtube
@@ -27,7 +28,18 @@ else:
 if args.ar is not None:
     approach_rate = args.ar
 else:
-    approach_rate = 7  # must be >0, usually [1, 10]
+    approach_rate = 10  # must be >0, usually [1, 10]
+
+
+@dataclass
+class GameData:
+    difficulty: int
+    score: int
+    approach_rate: int
+    combo: int
+    highest_combo: int
+    perfect_count: int
+    miss_count: int
 
 
 class Game:
@@ -39,15 +51,15 @@ class Game:
         self.end_scene = None
         self.screen_width = 800
         self.screen_height = 450
-        self.data = {
-            'difficulty': difficulty,
-            'score': 0,
-            'approach_rate': approach_rate,
-            'combo': 0,
-            'highest_combo': 0,
-            'perfect_count': 0,
-            'miss_count': 0,
-        }
+        self.data = GameData(
+            difficulty=difficulty,
+            score=0,
+            approach_rate=approach_rate,
+            combo=0,
+            highest_combo=0,
+            perfect_count=0,
+            miss_count=0
+        )
         pygame.init()
         pygame.display.init()
         self.window = pygame.display.set_mode((self.screen_width, self.screen_height),
@@ -110,11 +122,11 @@ class GameScene:
         self.color = (255, 255, 255)
         self.font = pygame.font.Font(None, 32)
         self.data = data
-        self.combo_text = "Combo: {}".format(self.data['combo'])
+        self.combo_text = "Combo: {}".format(self.data.combo)
         self.combo_label = self.font.render(self.combo_text, True, (255, 255, 255))
         self.combo_label_rect = self.combo_label.get_rect()
         self.combo_label_rect.bottomleft = (10, self.screen_height - 10)
-        self.score_text = "Score: {}".format(self.data['score'])
+        self.score_text = "Score: {}".format(self.data.score)
         self.score_label = self.font.render(self.score_text, True, (255, 255, 255))
         self.score_label_rect = self.score_label.get_rect()
         self.score_label_rect.topright = (self.screen_width - 10, 10)
@@ -139,8 +151,8 @@ class GameScene:
         self.cursor_pressed_img_rect = None
 
         self.pattern_manager = PatternManager(self.screen_width, self.screen_height, self.fps, self.seed,
-                                              difficulty=self.data["difficulty"],
-                                              approach_rate=self.data["approach_rate"])
+                                              difficulty=self.data.difficulty,
+                                              approach_rate=self.data.approach_rate)
         self.window_buffer = None
 
         self.initialize()
@@ -281,19 +293,19 @@ class GameScene:
         if self.game_started:
             self.input_manager.update()
             self.steps += 1
-            score = self.data["score"]
+            score = self.data.score
             temp_score = self.pattern_manager.update_patterns(self.steps, self.input_manager)
             score += temp_score
             if temp_score >= 10:
-                combo = self.data['combo']
+                combo = self.data.combo
                 combo += 1
-                self.data['combo'] = combo
-                perfect_count = self.data['perfect_count']
+                self.data.combo = combo
+                perfect_count = self.data.perfect_count
                 perfect_count += 1
-                self.data['perfect_count'] = perfect_count
+                self.data.perfect_count = perfect_count
                 # print(f"Perfect Count: {perfect_count}")
                 self.tap_sound_effect.play()
-            self.data["score"] = score
+            self.data.score = score
 
     def render(self):
         fps = self.clock.get_fps()
@@ -316,12 +328,11 @@ class GameScene:
         # rendering objects
         isMissed = not self.pattern_manager.render_patterns(win, self.steps)
         if isMissed:
-            if self.data["combo"] > self.data["highest_combo"]:
-                self.data["highest_combo"] = self.data["combo"]
-            self.data["combo"] = 0
-            miss_count = self.data["miss_count"]
+            self.data.highest_combo = max(self.data.combo, self.data.highest_combo)
+            self.data.combo = 0
+            miss_count = self.data.miss_count
             miss_count += 1
-            self.data["miss_count"] = miss_count
+            self.data.miss_count = miss_count
         self.window_buffer.blit(win, (0, 0))
         if self.input_manager.is_user_holding:
             self.cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
@@ -331,12 +342,12 @@ class GameScene:
             win.blit(self.cursor_img, self.cursor_img_rect)  # draw the cursor
 
         # print cumulative score and combo
-        self.score_text = "Score: {}".format(self.data['score'])
+        self.score_text = "Score: {}".format(self.data.score)
         self.score_label = self.font.render(self.score_text, True, (255, 255, 255))
         self.score_label_rect = self.score_label.get_rect()
         self.score_label_rect.topright = (self.screen_width - 10, 10)
         win.blit(self.score_label, self.score_label_rect)
-        self.combo_text = "Combo: {}".format(self.data['combo'])
+        self.combo_text = "Combo: {}".format(self.data.combo)
         self.combo_label = self.font.render(self.combo_text, True, (255, 255, 255))
         self.combo_label_rect = self.combo_label.get_rect()
         self.combo_label_rect.bottomleft = (10, self.screen_height - 10)
@@ -518,7 +529,7 @@ class MenuScene:
 
             if button_rect.collidepoint(pygame.mouse.get_pos()):
                 if self.input_manager.is_mouse_clicked:  # Left mouse button pressed
-                    self.data['difficulty'] = i + 1
+                    self.data.difficulty = i + 1
 
             button_text = str(i + 1)  # Button label from 1 to 10
             button_text_surface = self.button_font.render(button_text, True, self.button_text_color)
@@ -539,7 +550,7 @@ class MenuScene:
 
             if button_rect.collidepoint(pygame.mouse.get_pos()):
                 if self.input_manager.is_mouse_clicked:  # Left mouse button pressed
-                    self.data['approach_rate'] = i + 1
+                    self.data.approach_rate = i + 1
 
             button_text = str(i + 1)  # Button label from 1 to 10
             button_text_surface = self.button_font.render(button_text, True, self.button_text_color)
@@ -566,6 +577,7 @@ class MenuScene:
         pygame.event.pump()
         pygame.display.update()
 
+
 class EndScene:
     def __init__(self, window, data):
         self.end_click = False
@@ -578,13 +590,13 @@ class EndScene:
 
         self.game_over_label_text = "GAME OVER"
         self.perfect_count_label_text = "Perfect Count:"
-        self.perfect_count = "{}".format(self.data['perfect_count'])
+        self.perfect_count = "{}".format(self.data.perfect_count)
         self.miss_count_label_text = "Miss Count:"
-        self.miss_count = "{}".format(self.data['miss_count'])
+        self.miss_count = "{}".format(self.data.miss_count)
         self.highest_combo_label_text = "Highest Combo:"
-        self.highest_combo = "{}".format(self.data['highest_combo'])
+        self.highest_combo = "{}".format(self.data.highest_combo)
         self.total_score_label_text = "Total Score:"
-        self.total_score = "{}".format(self.data['score'])
+        self.total_score = "{}".format(self.data.score)
         self.end_label_text = "END"
         self.label_font = pygame.font.Font(None, 36)
         self.label_color = (255, 255, 255)  # White color
@@ -619,7 +631,7 @@ class EndScene:
         label_rect = label_surface.get_rect(topright=(450, 150))
         win.blit(label_surface, label_rect)
 
-        self.perfect_count = "{}".format(self.data['perfect_count'])
+        self.perfect_count = "{}".format(self.data.perfect_count)
         label_surface = self.label_font.render(self.perfect_count, True, self.label_color)
         label_rect = label_surface.get_rect(topleft=(500, 150))
         win.blit(label_surface, label_rect)
@@ -629,7 +641,7 @@ class EndScene:
         label_rect = label_surface.get_rect(topright=(450, 200))
         win.blit(label_surface, label_rect)
 
-        self.miss_count = "{}".format(self.data['miss_count'])
+        self.miss_count = "{}".format(self.data.miss_count)
         label_surface = self.label_font.render(self.miss_count, True, self.label_color)
         label_rect = label_surface.get_rect(topleft=(500, 200))
         win.blit(label_surface, label_rect)
@@ -639,7 +651,7 @@ class EndScene:
         label_rect = label_surface.get_rect(topright=(450, 250))
         win.blit(label_surface, label_rect)
 
-        self.highest_combo = "{}".format(self.data['highest_combo'])
+        self.highest_combo = "{}".format(self.data.highest_combo)
         label_surface = self.label_font.render(self.highest_combo, True, self.label_color)
         label_rect = label_surface.get_rect(topleft=(500, 250))
         win.blit(label_surface, label_rect)
@@ -649,14 +661,14 @@ class EndScene:
         label_rect = label_surface.get_rect(topright=(450, 300))
         win.blit(label_surface, label_rect)
 
-        self.total_score = "{}".format(self.data['score'])
+        self.total_score = "{}".format(self.data.score)
         label_surface = self.label_font.render(self.total_score, True, self.label_color)
         label_rect = label_surface.get_rect(topleft=(500, 300))
         win.blit(label_surface, label_rect)
 
         # End button
         button_surface = self.label_font.render(self.end_label_text, True, self.label_color)
-        button_rect = button_surface.get_rect(center=(self.screen_width//2, 400))
+        button_rect = button_surface.get_rect(center=(self.screen_width // 2, 400))
         win.blit(button_surface, button_rect)
 
         if button_rect.collidepoint(pygame.mouse.get_pos()):

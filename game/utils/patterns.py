@@ -51,17 +51,17 @@ def circle_surface(color, color_inner, thickness, stroke_width, scaling_factor):
 
 
 def draw_approach_circle(win, point, relative_time_difference, thickness, stroke_width, approach_rate):
-    approach_variable = 2 + np.cbrt(approach_rate)
+    approach_variable = 1.5 + 1.2 * np.cbrt(approach_rate)  # tune this to control how fast the approach circle comes in
     approach_constant = 1 / approach_variable
     if relative_time_difference > approach_constant:
         return
-    scaling_factor = 1 - approach_variable * relative_time_difference
+    scaling_factor = 1 - 1.2 * approach_variable * relative_time_difference  # tune this to control size of approach circle
     alpha = (
-        255 - 255 * 1 / approach_constant ** 3 * relative_time_difference ** 3
+        255 - 255 * 1 / pow(approach_constant, 2.4) * pow(relative_time_difference, 2.4)
         if relative_time_difference < 0
         else 255 - 255 * 1 / np.sqrt(approach_constant) * np.sqrt(relative_time_difference)
     )
-    alpha = min(max(alpha, 0), 255)
+    alpha = int(min(max(alpha, 0), 255))
     circle = circle_surface((255, 255, 255, alpha), (0, 0, 0, 0),
                             thickness, stroke_width, scaling_factor)
     rect = circle.get_rect(center=point)
