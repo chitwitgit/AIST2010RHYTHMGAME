@@ -2,6 +2,7 @@ import numpy as np
 import librosa
 import time
 import copy
+from scipy.special import rel_entr
 
 def merge_close_onset(onset_times, onset_durations, tempo, precision=0.125):
     spb = 60 / tempo * precision
@@ -259,7 +260,7 @@ def onset_detection_back(x, fs, fft_length=1024, fft_hop_length=512, tempo=None)
 
 
 # detect length of each onsets
-def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=512, sr=22050, tolerance=4):
+def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=512, sr=22050, tolerance=6):
     residual_size = fft_length - fft_hop_length
     filtered_onset_samples = onset_samples
     filtered_onset_samples[onset_samples < fft_length] = fft_length - residual_size
@@ -295,22 +296,23 @@ def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=
     temp_indices[~satisfaction] = number_of_frames - 1
     temp_onset_samples[~satisfaction] = 0
 
-    old_frame = onset_frame
-
+    old_frame = onset_frame #/ np.sum(onset_frame)
     while valid_mask.sum() > 0:
         new_onset_frame = y[:, temp_indices]
+        # new_onset_frame /= np.sum(new_onset_frame)
         new_peaks = np.argmax(new_onset_frame, axis=0)
         new_amplitude = np.max(new_onset_frame, axis=0)
 
         diff = np.mean((old_frame - new_onset_frame) ** 2, axis=0)
+        diff = sum(rel_entr(old_frame, new_onset_frame))
 
         satisfaction = np.ones((onset_samples.shape[0]))
 
         # compute distribution difference
-        satisfaction = np.logical_and(satisfaction, diff < 6)
+        satisfaction = np.logical_and(satisfaction, diff >= -2)
 
         # check change in max frequency peak
-        satisfaction = np.logical_and(satisfaction, np.abs(new_peaks - old_peaks) <= tolerance)
+        # satisfaction = np.logical_and(satisfaction, np.abs(new_peaks - old_peaks) <= tolerance)
 
         # use max frequency amplitude
         # satisfaction = np.logical_and(satisfaction, new_amplitude >= old_amplitude / 2)
