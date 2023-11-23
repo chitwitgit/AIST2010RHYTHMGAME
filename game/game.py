@@ -37,6 +37,7 @@ class Game:
         self.pause_scene = None
         self.current_scene = None
         self.menu_scene = None
+        self.end_scene = None
         self.screen_width = 800
         self.screen_height = 450
         self.data = {
@@ -56,6 +57,7 @@ class Game:
         self.game_scene = GameScene(self.window, self.data)
         self.pause_scene = PauseScene(self.window, None)
         self.menu_scene = MenuScene(self.window, self.data)
+        self.end_scene = EndScene(self.window, self.data)
         self.current_scene = self.menu_scene
 
 
@@ -73,8 +75,7 @@ class Game:
                 self.close()
                 running = False
             if state == "End":  # add end screen if needed
-                self.close()
-                running = False
+                self.end()
 
     def pause_game(self):
         self.current_scene = self.pause_scene
@@ -86,6 +87,10 @@ class Game:
     def menu(self):
         self.menu_scene.start_click = False
         self.current_scene = self.menu_scene
+
+    def end(self):
+        self.end_scene.end_click = False
+        self.current_scene = self.end_scene
 
     def close(self):
         if self.window is not None:
@@ -549,6 +554,114 @@ class MenuScene:
         if button_rect.collidepoint(pygame.mouse.get_pos()):
             if self.input_manager.is_mouse_clicked:  # Left mouse button pressed
                 self.start_click = True
+
+        if self.input_manager.is_mouse_holding:
+            self.cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
+            win.blit(self.cursor_pressed_img, self.cursor_pressed_img_rect)  # draw the cursor
+        else:
+            self.cursor_img_rect.center = pygame.mouse.get_pos()  # update position
+            win.blit(self.cursor_img, self.cursor_img_rect)  # draw the cursor
+
+        self.window.blit(win, win.get_rect())
+        pygame.event.pump()
+        pygame.display.update()
+
+class EndScene:
+    def __init__(self, window, data):
+        self.end_click = False
+        self.window = window
+        self.screen_width, self.screen_height = window.get_size()
+        self.input_manager = InputManager()
+        self.clock = pygame.time.Clock()
+
+        self.data = data
+
+        self.game_over_label_text = "GAME OVER"
+        self.perfect_count_label_text = "Perfect Count:"
+        self.perfect_count = "{}".format(self.data['perfect_count'])
+        self.miss_count_label_text = "Miss Count:"
+        self.miss_count = "{}".format(self.data['miss_count'])
+        self.highest_combo_label_text = "Highest Combo:"
+        self.highest_combo = "{}".format(self.data['highest_combo'])
+        self.total_score_label_text = "Total Score:"
+        self.total_score = "{}".format(self.data['score'])
+        self.end_label_text = "END"
+        self.label_font = pygame.font.Font(None, 36)
+        self.label_color = (255, 255, 255)  # White color
+
+        self.cursor_img = pygame.image.load('data/images/cursor.png').convert_alpha()
+        self.cursor_img_rect = self.cursor_img.get_rect()
+        self.cursor_pressed_img = pygame.image.load('data/images/cursor_pressed.png').convert_alpha()
+        self.cursor_pressed_img_rect = self.cursor_pressed_img.get_rect()
+
+    def run(self, seed=None):
+        while not self.end_click:
+            self.input_manager.update()
+            self.render()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return "Stop Game"
+            if self.end_click:
+                return "Stop Game"
+
+    def render(self):
+        pygame.mouse.set_visible(False)  # hides the cursor and will draw a cursor for playing rhythm game
+        win = pygame.Surface((self.screen_width, self.screen_height))
+        win.fill((0, 0, 0))
+
+        # Set Game Over Label
+        label_surface = self.label_font.render(self.game_over_label_text, True, self.label_color)
+        label_rect = label_surface.get_rect(center=(self.screen_width // 2, 75))
+        win.blit(label_surface, label_rect)
+
+        # Set Perfect Count Label
+        label_surface = self.label_font.render(self.perfect_count_label_text, True, self.label_color)
+        label_rect = label_surface.get_rect(topright=(450, 150))
+        win.blit(label_surface, label_rect)
+
+        self.perfect_count = "{}".format(self.data['perfect_count'])
+        label_surface = self.label_font.render(self.perfect_count, True, self.label_color)
+        label_rect = label_surface.get_rect(topleft=(500, 150))
+        win.blit(label_surface, label_rect)
+
+        # Set Miss Count Label
+        label_surface = self.label_font.render(self.miss_count_label_text, True, self.label_color)
+        label_rect = label_surface.get_rect(topright=(450, 200))
+        win.blit(label_surface, label_rect)
+
+        self.miss_count = "{}".format(self.data['miss_count'])
+        label_surface = self.label_font.render(self.miss_count, True, self.label_color)
+        label_rect = label_surface.get_rect(topleft=(500, 200))
+        win.blit(label_surface, label_rect)
+
+        # Set Highest Combo Label
+        label_surface = self.label_font.render(self.highest_combo_label_text, True, self.label_color)
+        label_rect = label_surface.get_rect(topright=(450, 250))
+        win.blit(label_surface, label_rect)
+
+        self.highest_combo = "{}".format(self.data['highest_combo'])
+        label_surface = self.label_font.render(self.highest_combo, True, self.label_color)
+        label_rect = label_surface.get_rect(topleft=(500, 250))
+        win.blit(label_surface, label_rect)
+
+        # Set Total Score Label
+        label_surface = self.label_font.render(self.total_score_label_text, True, self.label_color)
+        label_rect = label_surface.get_rect(topright=(450, 300))
+        win.blit(label_surface, label_rect)
+
+        self.total_score = "{}".format(self.data['score'])
+        label_surface = self.label_font.render(self.total_score, True, self.label_color)
+        label_rect = label_surface.get_rect(topleft=(500, 300))
+        win.blit(label_surface, label_rect)
+
+        # End button
+        button_surface = self.label_font.render(self.end_label_text, True, self.label_color)
+        button_rect = button_surface.get_rect(center=(self.screen_width//2, 400))
+        win.blit(button_surface, button_rect)
+
+        if button_rect.collidepoint(pygame.mouse.get_pos()):
+            if self.input_manager.is_mouse_clicked:  # Left mouse button pressed
+                self.end_click = True
 
         if self.input_manager.is_mouse_holding:
             self.cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
