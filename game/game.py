@@ -613,6 +613,9 @@ class EndScene:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     return "Stop Game"
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        return "Stop Game"
             if self.end_click:
                 return "Stop Game"
 
