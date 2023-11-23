@@ -19,7 +19,7 @@ class PatternManager:
 
         # difficulty dependent variables such as circle size and approach rate
         self.radius = 50 - (difficulty - 1) * 2.5
-        self.lifetime = 245 - approach_rate * 17.5
+        self.lifetime = 150 - approach_rate * 8
 
         self.last_onset_time = 0
         self.last_circle_position = np.array([self.screen_width / 2, self.screen_height / 2])
@@ -148,7 +148,10 @@ class PatternManager:
     def update_patterns(self, t, input_manager):
         score_earned = 0
         for pattern in self.pattern_queue:
-            score_earned += pattern.update(t, input_manager)
+            temp_score, clicked = pattern.update(t, input_manager)
+            score_earned += temp_score
+            if clicked:
+                break
         return score_earned
 
     def render_patterns(self, win, t):
