@@ -7,8 +7,7 @@ from utils import notedetection
 from utils.youtubeDL import download_youtube_audio
 from utils.input_manager import InputManager
 import os
-import sys
-from cmdargs import args
+from utils.cmdargs import args
 from dataclasses import dataclass
 
 if args.youtube is not None:
