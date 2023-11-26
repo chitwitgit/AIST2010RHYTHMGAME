@@ -4,16 +4,18 @@ import time
 import copy
 from scipy.special import rel_entr
 
+
 def merge_close_onset(onset_times, onset_durations, tempo, precision=0.125):
     spb = 60 / tempo * precision
     i = 0
-    l = len(onset_times)
-    while i < l-1:
-        if abs(onset_times[i+1] - onset_times[i]) <= precision:
-            onset_durations[i] = max(onset_times[i] + onset_durations[i], onset_times[i+1] + onset_durations[i+1]) - onset_times[i]
-            onset_times = np.delete(onset_times, i+1)
-            onset_durations = np.delete(onset_durations, i+1)
-            l -= 1
+    length = len(onset_times)
+    while i < length - 1:
+        if abs(onset_times[i + 1] - onset_times[i]) <= precision:
+            onset_durations[i] = max(onset_times[i] + onset_durations[i], onset_times[i + 1] + onset_durations[i + 1]) - \
+                                 onset_times[i]
+            onset_times = np.delete(onset_times, i + 1)
+            onset_durations = np.delete(onset_durations, i + 1)
+            length -= 1
         else:
             i += 1
     return onset_times, onset_durations
@@ -23,7 +25,7 @@ def remove_noisy_onset(onset_times, onset_durations, x, sr):
     onset_index = librosa.time_to_samples(onset_times, sr=sr)
     onset_index_range = onset_index.reshape(-1, 1) + np.arange(0, 200)
     onset_sample_range = x[onset_index_range]
-    onset_amplitude = np.sqrt(np.mean(onset_sample_range**2, axis=1))
+    onset_amplitude = np.sqrt(np.mean(onset_sample_range ** 2, axis=1))
 
     mean_amplitude = np.mean(onset_amplitude)
 
@@ -33,7 +35,9 @@ def remove_noisy_onset(onset_times, onset_durations, x, sr):
 
     return onset_times, onset_durations
 
-def merge_vocal_background_with_padding(vocal_onset, vocal_duration, background_onset, background_duration, tempo, precision=1.0):
+
+def merge_vocal_background_with_padding(vocal_onset, vocal_duration, background_onset, background_duration, tempo,
+                                        precision=1.0):
     spb = 60 / tempo * precision
     merge_onset = []
     merge_duration = []
@@ -81,6 +85,7 @@ def merge_vocal_background_with_padding(vocal_onset, vocal_duration, background_
         j += 1
 
     return merge_onset, merge_duration, merge_label
+
 
 def vocal_separation(y, sr):
     # And compute the spectrogram magnitude and phase
@@ -134,8 +139,8 @@ def vocal_separation(y, sr):
     y_foreground = librosa.istft(S_foreground * phase)
     y_background = librosa.istft(S_background * phase)
 
-
     return y_foreground, y_background
+
 
 def load_audio(filename):
     x, fs = librosa.load(filename)
@@ -213,7 +218,6 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512, tempo=None):
     print('frame rate:', fs)
     x_background = x
     for x in [x_foreground, x_background]:
-
         y = abs(librosa.stft(x, n_fft=fft_length, hop_length=fft_hop_length, center=False))
         S = librosa.feature.melspectrogram(y=x, sr=fs, n_fft=fft_length, hop_length=fft_hop_length)
         onset_env = librosa.onset.onset_strength(y=x, sr=fs)
@@ -234,7 +238,7 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512, tempo=None):
         duration_list.append(onset_durations)
 
     # calculate the bar number for each onset
-    beats_per_bar = 8   # usually it's 4 beats per bar, but having 8 beats per pattern makes a more enjoyable map
+    beats_per_bar = 8  # usually it's 4 beats per bar, but having 8 beats per pattern makes a more enjoyable map
     bar_duration = 60 / tempo * beats_per_bar
     onset_bars_list = [(i // bar_duration + 1) for i in onset_list]
     print('durations:', duration_list[0])
@@ -296,7 +300,7 @@ def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=
     temp_indices[~satisfaction] = number_of_frames - 1
     temp_onset_samples[~satisfaction] = 0
 
-    old_frame = onset_frame #/ np.sum(onset_frame)
+    old_frame = onset_frame  # / np.sum(onset_frame)
     while valid_mask.sum() > 0:
         new_onset_frame = y[:, temp_indices]
         # new_onset_frame /= np.sum(new_onset_frame)

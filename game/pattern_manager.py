@@ -47,7 +47,7 @@ class PatternManager:
         random.seed(self.seed + seed_add)
         np.random.seed(self.seed + seed_add)
 
-        # preprocess the lists so they are zipped according to their bar numbers
+        # preprocess the lists, so they are zipped according to their bar numbers
         zipped_data = [(time, duration, bar) for time, duration, bar
                        in zip(onset_time_frames, onset_duration_frames, onset_bars)]
         grouped_data = [list(group) for key, group in groupby(zipped_data, key=lambda x: x[2])]

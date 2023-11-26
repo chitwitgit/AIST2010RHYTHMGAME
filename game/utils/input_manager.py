@@ -29,15 +29,15 @@ class InputManager:
     @property
     def is_user_inputted(self):
         return (
-            self.mouse_state[0] and not self.prev_mouse_state[0] or
-            self.keys[pygame.K_x] and not self.prev_keys[pygame.K_x] or
-            self.keys[pygame.K_z] and not self.prev_keys[pygame.K_z]
+                self.mouse_state[0] and not self.prev_mouse_state[0] or
+                self.keys[pygame.K_x] and not self.prev_keys[pygame.K_x] or
+                self.keys[pygame.K_z] and not self.prev_keys[pygame.K_z]
         )
 
     @property
     def is_user_holding(self):
         return (
-            self.mouse_state[0] or
-            self.keys[pygame.K_x] or
-            self.keys[pygame.K_z]
+                self.mouse_state[0] or
+                self.keys[pygame.K_x] or
+                self.keys[pygame.K_z]
         )

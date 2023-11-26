@@ -9,12 +9,13 @@ from utils.input_manager import InputManager
 import os
 from utils.cmdargs import args
 from dataclasses import dataclass
+import threading
 
 if args.youtube is not None:
     youtube_link = args.youtube
 else:
     youtube_link = "https://www.youtube.com/watch?v=HFPBd_mQYhg"
-    youtube_link = "https://www.youtube.com/watch?v=2c_lHmkOq0E"
+    youtube_link = "https://www.youtube.com/watch?v=i0K40f-6mLs"
 
 if args.tempo is not None:
     given_tempo = args.tempo
@@ -65,10 +66,15 @@ class Game:
                                               pygame.HWSURFACE | pygame.DOUBLEBUF)
 
         self.game_scene = GameScene(self.window, self.data)
-        self.pause_scene = PauseScene(self.window, None)
+        self.pause_scene = PauseScene(self.window)
         self.menu_scene = MenuScene(self.window, self.data)
         self.end_scene = EndScene(self.window, self.data)
-        self.current_scene = self.menu_scene
+
+        # Start the expensive operations in game scene as a task
+        task = self.game_scene.run_expensive_operations
+
+        self.loading_scene = LoadingScene(self.window, task)
+        self.current_scene = self.loading_scene
 
     def run(self, seed=None):
         running = True
@@ -154,16 +160,15 @@ class GameScene:
                                               approach_rate=self.data.approach_rate)
         self.window_buffer = None
 
-        self.initialize()
-
-    def initialize(self):
         random.seed(self.seed)
-        self.load_assets(keep_files=True, use_new_files=False)  # if you want to try a new song
-        # self.load_assets(keep_files=True, use_new_files=False)  # if same song which has been downloaded
-
         if self.clock is None:
             self.clock = pygame.time.Clock()
         pygame.mouse.set_visible(False)  # hides the cursor and will draw a cursor for playing rhythm game
+
+    def run_expensive_operations(self):
+        self.load_assets(keep_files=True, use_new_files=True)  # if you want to try a new song
+        # self.load_assets(keep_files=True, use_new_files=False)  # if same song which has been downloaded
+
         win = pygame.Surface((self.screen_width, self.screen_height))
         win.fill((0, 0, 0))
         self.pattern_manager.generate_map(self.music_data)
@@ -179,7 +184,6 @@ class GameScene:
         onset_durations_file = os.path.join("data", "onset_durations.npy")
         onset_bars_file = os.path.join("data", "onset_bars.npy")
         tempo_file = os.path.join("data", "tempo.npy")
-
         if use_new_files:
             if os.path.exists(self.audio_file_full_path):
                 os.remove(self.audio_file_full_path)
@@ -377,11 +381,11 @@ class GameScene:
 
 
 class PauseScene:
-    def __init__(self, window, paused_screen):
+    def __init__(self, window):
         self.resume_selected = False
         self.window = window
         self.screen_width, self.screen_height = window.get_size()
-        self.paused_screen = paused_screen
+        self.paused_screen = None
         self.input_manager = InputManager()
         self.clock = pygame.time.Clock()
 
@@ -687,6 +691,62 @@ class EndScene:
         self.window.blit(win, win.get_rect())
         pygame.event.pump()
         pygame.display.update()
+
+
+class LoadingScene:
+    def __init__(self, window, task):
+        self.end_click = False
+        self.window = window
+        self.screen_width, self.screen_height = window.get_size()
+        self.input_manager = InputManager()
+        self.clock = pygame.time.Clock()
+
+        self.task = task
+        self.task_done = threading.Event()  # Event for signaling task completion
+
+        self.cursor_img = pygame.image.load('data/images/cursor.png').convert_alpha()
+        self.cursor_img_rect = self.cursor_img.get_rect()
+        self.cursor_pressed_img = pygame.image.load('data/images/cursor_pressed.png').convert_alpha()
+        self.cursor_pressed_img_rect = self.cursor_pressed_img.get_rect()
+
+    def run_task(self):
+        self.task()
+        self.task_done.set()
+
+    def run(self, seed=None):
+        threading.Thread(target=self.run_task, daemon=True).start()
+        while not self.task_done.is_set():
+            self.input_manager.update()
+            self.render()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return "Stop Game"
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        return "Stop Game"
+        return "Menu"
+
+    def render(self):
+        pygame.mouse.set_visible(False)  # hides the cursor and will draw a cursor for playing rhythm game
+        win = pygame.Surface((self.screen_width, self.screen_height))
+        win.fill((0, 0, 0))
+
+        font = pygame.font.Font(None, 50)  # Font for the score numbers
+        loading_text = font.render("LOADING ...", True, (255, 255, 255))
+        loading_text_rect = loading_text.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
+        win.blit(loading_text, loading_text_rect)
+
+        if self.input_manager.is_mouse_holding:
+            self.cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
+            win.blit(self.cursor_pressed_img, self.cursor_pressed_img_rect)  # draw the cursor
+        else:
+            self.cursor_img_rect.center = pygame.mouse.get_pos()  # update position
+            win.blit(self.cursor_img, self.cursor_img_rect)  # draw the cursor
+
+        self.window.blit(win, win.get_rect())
+        pygame.event.pump()
+        pygame.display.update()
+        self.clock.tick(60)
 
 
 def main():

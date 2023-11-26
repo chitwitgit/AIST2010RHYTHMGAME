@@ -2,6 +2,7 @@ import os
 from pytube import YouTube
 import time
 import ffmpeg
+import asyncio
 
 
 def download_youtube_audio(url, output_path, output_name):
