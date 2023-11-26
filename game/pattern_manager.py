@@ -156,6 +156,7 @@ class PatternManager:
         return score_earned
 
     def render_patterns(self, win, t):
+        flag = True
         for pattern in self.pattern_queue:
             if pattern.render(win, t):  # past its lifetime
                 pattern = self.pattern_queue[0]
@@ -164,5 +165,5 @@ class PatternManager:
                 self.pattern_queue = self.pattern_queue[1:]
                 if self.queue_length < len(self.patterns):
                     self.pattern_queue.append(self.patterns[self.queue_length])
-                return isHit and pattern.score > 0
-        return True
+                flag = isHit and pattern.score > 0
+        return flag

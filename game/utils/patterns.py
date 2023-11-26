@@ -183,10 +183,10 @@ class TapPattern:
         time_difference = t - self.press_time
         relative_time_difference = time_difference / self.lifetime
         draw_clicked_circle(win, self.point, relative_time_difference, self.thickness, self.stroke_width)
-        font = pygame.font.Font(None, 25)  # Font for the countdown numbers
-        countdown_text = font.render(str(int(self.score)), True, (255, 255, 255))
-        countdown_text_rect = countdown_text.get_rect(center=self.point)
-        win.blit(countdown_text, countdown_text_rect)
+        font = pygame.font.Font(None, 25)  # Font for the score numbers
+        score_text = font.render(str(int(self.score)), True, (255, 255, 255))
+        score_text_rect = score_text.get_rect(center=self.point)
+        win.blit(score_text, score_text_rect)
 
         return abs(relative_time_difference) > 0.6
 
@@ -343,12 +343,12 @@ class SliderPattern(ABC):
         relative_time_difference = time_difference / self.lifetime
         draw_clicked_circle(win, self.starting_point, relative_time_difference, self.thickness, self.stroke_width)
         font = pygame.font.Font(None, 25)
-        countdown_text = font.render(str(int(self.score)), True, (255, 255, 255))
+        score_text = font.render(str(int(self.score)), True, (255, 255, 255))
 
         if self.last_pressed is None:
             self.last_pressed = self.starting_point
-        countdown_text_rect = countdown_text.get_rect(center=tuple(self.last_pressed))
-        win.blit(countdown_text, countdown_text_rect)
+        score_text_rect = score_text.get_rect(center=tuple(self.last_pressed))
+        win.blit(score_text, score_text_rect)
         return abs(relative_time_difference) > 0.6
 
     def draw_tracing_circle(self, win, t, hollow=False):
