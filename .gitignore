@@ -6,6 +6,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# For this specific project
+rhythmgame/
+ffmpeg
+*.npy
+
 # C extensions
 *.so
 
