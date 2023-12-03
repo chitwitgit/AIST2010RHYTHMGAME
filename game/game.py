@@ -49,8 +49,9 @@ class Game:
         self.current_scene = None
         self.menu_scene = None
         self.end_scene = None
-        self.screen_width = 800
-        self.screen_height = 450
+        self.screen_width = 1200
+        self.screen_height = 675
+
         self.data = GameData(
             difficulty=difficulty,
             score=0,
@@ -65,15 +66,28 @@ class Game:
         self.window = pygame.display.set_mode((self.screen_width, self.screen_height),
                                               pygame.HWSURFACE | pygame.DOUBLEBUF)
 
-        self.game_scene = GameScene(self.window, self.data)
-        self.pause_scene = PauseScene(self.window)
-        self.menu_scene = MenuScene(self.window, self.data)
-        self.end_scene = EndScene(self.window, self.data)
+        cursor_img_scale_factor = 1.5
+        cursor_img = pygame.image.load('data/images/cursor.png').convert_alpha()
+        cursor_img = pygame.transform.smoothscale(cursor_img, (
+            int(cursor_img.get_width() * cursor_img_scale_factor),
+            int(cursor_img.get_height() * cursor_img_scale_factor)))
+        cursor_img_rect = cursor_img.get_rect()
 
-        # Start the expensive operations in game scene as a task
+        cursor_pressed_img = pygame.image.load('data/images/cursor_pressed.png').convert_alpha()
+        cursor_pressed_img = pygame.transform.smoothscale(cursor_pressed_img, (
+            int(cursor_pressed_img.get_width() * cursor_img_scale_factor),
+            int(cursor_pressed_img.get_height() * cursor_img_scale_factor)))
+        cursor_pressed_img_rect = cursor_pressed_img.get_rect()
+
+        cursor_images = (cursor_img, cursor_img_rect, cursor_pressed_img, cursor_pressed_img_rect)
+
+        self.game_scene = GameScene(self.window, self.data, cursor_images)
+        self.pause_scene = PauseScene(self.window, cursor_images)
+        self.menu_scene = MenuScene(self.window, self.data, cursor_images)
+        self.end_scene = EndScene(self.window, self.data, cursor_images)
         task = self.game_scene.run_expensive_operations
-
-        self.loading_scene = LoadingScene(self.window, task)
+        # assign expensive task to loading scene to run in parallel
+        self.loading_scene = LoadingScene(self.window, task, cursor_images)
         self.current_scene = self.loading_scene
 
     def run(self, seed=None):
@@ -104,6 +118,7 @@ class Game:
         self.current_scene = self.menu_scene
 
     def end(self):
+        self.end_scene.update_display_data()
         self.end_scene.end_click = False
         self.current_scene = self.end_scene
 
@@ -114,9 +129,8 @@ class Game:
 
 
 class GameScene:
-    def __init__(self, window, data):
-        self.screen_width = 800
-        self.screen_height = 450
+    def __init__(self, window, data, cursor_images):
+        self.screen_width, self.screen_height = window.get_size()
 
         self.window = window
         self.clock = None
@@ -136,6 +150,7 @@ class GameScene:
         self.score_label_rect = self.score_label.get_rect()
         self.score_label_rect.topright = (self.screen_width - 10, 10)
 
+        self.cursor_images = cursor_images
         self.tap_sound_effect = mixer.Sound('data/audio/sound_effects/normal-hitnormal.ogg')
         self.tap_sound_effect.set_volume(0.3)  # set volume
 
@@ -150,10 +165,6 @@ class GameScene:
         self.paused = False
 
         self.input_manager = InputManager()
-        self.cursor_img = None
-        self.cursor_img_rect = None
-        self.cursor_pressed_img = None
-        self.cursor_pressed_img_rect = None
 
         self.pattern_manager = PatternManager(self.screen_width, self.screen_height, self.fps, self.seed,
                                               difficulty=self.data.difficulty,
@@ -166,7 +177,7 @@ class GameScene:
         pygame.mouse.set_visible(False)  # hides the cursor and will draw a cursor for playing rhythm game
 
     def run_expensive_operations(self):
-        self.load_assets(keep_files=True, use_new_files=True)  # if you want to try a new song
+        self.load_assets(keep_files=True, use_new_files=False)  # if you want to try a new song
         # self.load_assets(keep_files=True, use_new_files=False)  # if same song which has been downloaded
 
         win = pygame.Surface((self.screen_width, self.screen_height))
@@ -206,10 +217,6 @@ class GameScene:
             download_youtube_audio(youtube_url, file_path, file_name)
         else:
             print("File already exists. Skipping download.")
-        self.cursor_img = pygame.image.load('data/images/cursor.png').convert_alpha()
-        self.cursor_img_rect = self.cursor_img.get_rect()
-        self.cursor_pressed_img = pygame.image.load('data/images/cursor_pressed.png').convert_alpha()
-        self.cursor_pressed_img_rect = self.cursor_pressed_img.get_rect()
         if self.background is None:
             background = pygame.image.load("data/images/furina.jpg").convert()
             self.background = pygame.transform.smoothscale(background, (self.screen_width, self.screen_height))
@@ -337,12 +344,13 @@ class GameScene:
             miss_count += 1
             self.data.miss_count = miss_count
         self.window_buffer.blit(win, (0, 0))
+        cursor_img, cursor_img_rect, cursor_pressed_img, cursor_pressed_img_rect = self.cursor_images
         if self.input_manager.is_user_holding:
-            self.cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
-            win.blit(self.cursor_pressed_img, self.cursor_pressed_img_rect)  # draw the cursor
+            cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
+            win.blit(cursor_pressed_img, cursor_pressed_img_rect)  # draw the cursor
         else:
-            self.cursor_img_rect.center = pygame.mouse.get_pos()  # update position
-            win.blit(self.cursor_img, self.cursor_img_rect)  # draw the cursor
+            cursor_img_rect.center = pygame.mouse.get_pos()  # update position
+            win.blit(cursor_img, cursor_img_rect)  # draw the cursor
 
         # print cumulative score and combo
         self.score_text = "Score: {}".format(self.data.score)
@@ -381,7 +389,7 @@ class GameScene:
 
 
 class PauseScene:
-    def __init__(self, window):
+    def __init__(self, window, cursor_images):
         self.resume_selected = False
         self.window = window
         self.screen_width, self.screen_height = window.get_size()
@@ -389,10 +397,7 @@ class PauseScene:
         self.input_manager = InputManager()
         self.clock = pygame.time.Clock()
 
-        self.cursor_img = pygame.image.load('data/images/cursor.png').convert_alpha()
-        self.cursor_img_rect = self.cursor_img.get_rect()
-        self.cursor_pressed_img = pygame.image.load('data/images/cursor_pressed.png').convert_alpha()
-        self.cursor_pressed_img_rect = self.cursor_pressed_img.get_rect()
+        self.cursor_images = cursor_images
 
     def run(self, seed=None):
         self.resume_selected = False
@@ -413,12 +418,13 @@ class PauseScene:
         win = pygame.Surface((self.screen_width, self.screen_height))
         win.blit(self.paused_screen, (0, 0))
         self._apply_whiteness(win)
+        cursor_img, cursor_img_rect, cursor_pressed_img, cursor_pressed_img_rect = self.cursor_images
         if self.input_manager.is_mouse_holding:
-            self.cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
-            win.blit(self.cursor_pressed_img, self.cursor_pressed_img_rect)  # draw the cursor
+            cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
+            win.blit(cursor_pressed_img, cursor_pressed_img_rect)  # draw the cursor
         else:
-            self.cursor_img_rect.center = pygame.mouse.get_pos()  # update position
-            win.blit(self.cursor_img, self.cursor_img_rect)  # draw the cursor
+            cursor_img_rect.center = pygame.mouse.get_pos()  # update position
+            win.blit(cursor_img, cursor_img_rect)  # draw the cursor
         self.window.blit(win, win.get_rect())
         pygame.event.pump()
         pygame.display.update()
@@ -433,12 +439,13 @@ class PauseScene:
             countdown_text = font.render(str(countdown_time - i // fps), True, (255, 255, 255))
             countdown_text_rect = countdown_text.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
             win.blit(countdown_text, countdown_text_rect)
+            cursor_img, cursor_img_rect, cursor_pressed_img, cursor_pressed_img_rect = self.cursor_images
             if self.input_manager.is_mouse_holding:
-                self.cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
-                win.blit(self.cursor_pressed_img, self.cursor_pressed_img_rect)  # draw the cursor
+                cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
+                win.blit(cursor_pressed_img, cursor_pressed_img_rect)  # draw the cursor
             else:
-                self.cursor_img_rect.center = pygame.mouse.get_pos()  # update position
-                win.blit(self.cursor_img, self.cursor_img_rect)  # draw the cursor
+                cursor_img_rect.center = pygame.mouse.get_pos()  # update position
+                win.blit(cursor_img, cursor_img_rect)  # draw the cursor
             self.window.blit(win, win.get_rect())
             pygame.event.pump()
             pygame.display.update()
@@ -456,7 +463,7 @@ class PauseScene:
 
 
 class MenuScene:
-    def __init__(self, window, data):
+    def __init__(self, window, data, cursor_images):
         self.start_click = False
         self.window = window
         self.screen_width, self.screen_height = window.get_size()
@@ -464,6 +471,8 @@ class MenuScene:
         self.clock = pygame.time.Clock()
 
         self.data = data
+
+        self.cursor_images = cursor_images
 
         # Define label properties
         self.difficulty_label_text = "Difficulty:"
@@ -494,18 +503,13 @@ class MenuScene:
         self.approach_rate_label_pos_y = (self.screen_height - self.label_font.size(self.approach_rate_label_text)[
             1]) // 3 * 2 - 25
 
-        self.cursor_img = pygame.image.load('data/images/cursor.png').convert_alpha()
-        self.cursor_img_rect = self.cursor_img.get_rect()
-        self.cursor_pressed_img = pygame.image.load('data/images/cursor_pressed.png').convert_alpha()
-        self.cursor_pressed_img_rect = self.cursor_pressed_img.get_rect()
-
     def run(self, seed=None):
         while not self.start_click:
             self.input_manager.update()
             self.render()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    return "End"
+                    return "Stop Game"
             if self.start_click:
                 return "Resume"
 
@@ -569,12 +573,13 @@ class MenuScene:
             if self.input_manager.is_mouse_clicked:  # Left mouse button pressed
                 self.start_click = True
 
+        cursor_img, cursor_img_rect, cursor_pressed_img, cursor_pressed_img_rect = self.cursor_images
         if self.input_manager.is_mouse_holding:
-            self.cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
-            win.blit(self.cursor_pressed_img, self.cursor_pressed_img_rect)  # draw the cursor
+            cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
+            win.blit(cursor_pressed_img, cursor_pressed_img_rect)  # draw the cursor
         else:
-            self.cursor_img_rect.center = pygame.mouse.get_pos()  # update position
-            win.blit(self.cursor_img, self.cursor_img_rect)  # draw the cursor
+            cursor_img_rect.center = pygame.mouse.get_pos()  # update position
+            win.blit(cursor_img, cursor_img_rect)  # draw the cursor
 
         self.window.blit(win, win.get_rect())
         pygame.event.pump()
@@ -582,7 +587,7 @@ class MenuScene:
 
 
 class EndScene:
-    def __init__(self, window, data):
+    def __init__(self, window, data, cursor_images):
         self.end_click = False
         self.window = window
         self.screen_width, self.screen_height = window.get_size()
@@ -590,6 +595,7 @@ class EndScene:
         self.clock = pygame.time.Clock()
 
         self.data = data
+        self.cursor_images = cursor_images
 
         self.game_over_label_text = "GAME OVER"
         self.perfect_count_label_text = "Perfect Count:"
@@ -604,10 +610,11 @@ class EndScene:
         self.label_font = pygame.font.Font(None, 36)
         self.label_color = (255, 255, 255)  # White color
 
-        self.cursor_img = pygame.image.load('data/images/cursor.png').convert_alpha()
-        self.cursor_img_rect = self.cursor_img.get_rect()
-        self.cursor_pressed_img = pygame.image.load('data/images/cursor_pressed.png').convert_alpha()
-        self.cursor_pressed_img_rect = self.cursor_pressed_img.get_rect()
+    def update_display_data(self):
+        self.perfect_count = "{}".format(self.data.perfect_count)
+        self.miss_count = "{}".format(self.data.miss_count)
+        self.highest_combo = "{}".format(self.data.highest_combo)
+        self.total_score = "{}".format(self.data.score)
 
     def run(self, seed=None):
         while not self.end_click:
@@ -681,12 +688,13 @@ class EndScene:
             if self.input_manager.is_mouse_clicked:  # Left mouse button pressed
                 self.end_click = True
 
+        cursor_img, cursor_img_rect, cursor_pressed_img, cursor_pressed_img_rect = self.cursor_images
         if self.input_manager.is_mouse_holding:
-            self.cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
-            win.blit(self.cursor_pressed_img, self.cursor_pressed_img_rect)  # draw the cursor
+            cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
+            win.blit(cursor_pressed_img, cursor_pressed_img_rect)  # draw the cursor
         else:
-            self.cursor_img_rect.center = pygame.mouse.get_pos()  # update position
-            win.blit(self.cursor_img, self.cursor_img_rect)  # draw the cursor
+            cursor_img_rect.center = pygame.mouse.get_pos()  # update position
+            win.blit(cursor_img, cursor_img_rect)  # draw the cursor
 
         self.window.blit(win, win.get_rect())
         pygame.event.pump()
@@ -694,20 +702,16 @@ class EndScene:
 
 
 class LoadingScene:
-    def __init__(self, window, task):
+    def __init__(self, window, task, cursor_images):
         self.end_click = False
         self.window = window
         self.screen_width, self.screen_height = window.get_size()
         self.input_manager = InputManager()
         self.clock = pygame.time.Clock()
+        self.cursor_images = cursor_images
 
         self.task = task
         self.task_done = threading.Event()  # Event for signaling task completion
-
-        self.cursor_img = pygame.image.load('data/images/cursor.png').convert_alpha()
-        self.cursor_img_rect = self.cursor_img.get_rect()
-        self.cursor_pressed_img = pygame.image.load('data/images/cursor_pressed.png').convert_alpha()
-        self.cursor_pressed_img_rect = self.cursor_pressed_img.get_rect()
 
     def run_task(self):
         self.task()
@@ -736,12 +740,13 @@ class LoadingScene:
         loading_text_rect = loading_text.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
         win.blit(loading_text, loading_text_rect)
 
+        cursor_img, cursor_img_rect, cursor_pressed_img, cursor_pressed_img_rect = self.cursor_images
         if self.input_manager.is_mouse_holding:
-            self.cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
-            win.blit(self.cursor_pressed_img, self.cursor_pressed_img_rect)  # draw the cursor
+            cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
+            win.blit(cursor_pressed_img, cursor_pressed_img_rect)  # draw the cursor
         else:
-            self.cursor_img_rect.center = pygame.mouse.get_pos()  # update position
-            win.blit(self.cursor_img, self.cursor_img_rect)  # draw the cursor
+            cursor_img_rect.center = pygame.mouse.get_pos()  # update position
+            win.blit(cursor_img, cursor_img_rect)  # draw the cursor
 
         self.window.blit(win, win.get_rect())
         pygame.event.pump()
