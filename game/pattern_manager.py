@@ -27,8 +27,8 @@ class PatternManager:
         self.last_circle_position = np.array([self.screen_width / 2, self.screen_height / 2])
 
         # game boundaries
-        self.x_range = (100, 700)
-        self.y_range = (50, 400)
+        self.x_range = (self.radius * 5, screen_width - self.radius * 5)
+        self.y_range = (self.radius * 2, self.screen_height - self.radius * 2)
 
     def generate_map(self, music_data):
         onset_times, onset_durations, onset_bars, *_ = music_data
