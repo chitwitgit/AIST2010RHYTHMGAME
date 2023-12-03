@@ -16,11 +16,12 @@ if args.youtube is not None:
 else:
     youtube_link = "https://www.youtube.com/watch?v=HFPBd_mQYhg"
     youtube_link = "https://www.youtube.com/watch?v=i0K40f-6mLs"
+    youtube_link = "https://www.youtube.com/watch?v=fnAy9nlRuZs"
 
 if args.tempo is not None:
     given_tempo = args.tempo
 else:
-    given_tempo = 76
+    given_tempo = 130
 if args.difficulty is not None:
     difficulty = args.difficulty
 else:
@@ -49,8 +50,8 @@ class Game:
         self.current_scene = None
         self.menu_scene = None
         self.end_scene = None
-        self.screen_width = 800
-        self.screen_height = 450
+        self.screen_width = 1440
+        self.screen_height = 810
         self.data = GameData(
             difficulty=difficulty,
             score=0,
@@ -157,7 +158,8 @@ class GameScene:
 
         self.pattern_manager = PatternManager(self.screen_width, self.screen_height, self.fps, self.seed,
                                               difficulty=self.data.difficulty,
-                                              approach_rate=self.data.approach_rate)
+                                              approach_rate=self.data.approach_rate,
+                                              tempo=given_tempo)
         self.window_buffer = None
 
         random.seed(self.seed)

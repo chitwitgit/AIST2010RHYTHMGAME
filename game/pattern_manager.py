@@ -4,12 +4,14 @@ from itertools import groupby
 
 
 class PatternManager:
-    def __init__(self, screen_width, screen_height, fps, seed, difficulty, approach_rate):
+    def __init__(self, screen_width, screen_height, fps, seed, difficulty, approach_rate, tempo):
         self.screen_width = screen_width
         self.screen_height = screen_height
         self.fps = fps
         self.stroke_width = 5
         self.seed = seed
+        self.tempo = tempo
+        self.beat_duration = 60 / self.tempo
 
         self.patterns = []
         self.pattern_queue = None
@@ -95,14 +97,18 @@ class PatternManager:
         if onset_time - self.last_onset_time < 10:
             return
         self.last_onset_time = onset_time
-        pattern_type = random.choice(["TapPattern", "TapPattern", "TapPattern", "TapPattern", "TapPattern",
-                                      "TapPattern", "TapPattern", "TapPattern", "TapPattern", "TapPattern",
-                                      "TapPattern", "TapPattern", "TapPattern", "TapPattern", "TapPattern",
-                                      "Line", "CubicBezier", "Arc"])
-        t = onset_time
-        starting_t = t
-        ending_t = t + min(max(onset_duration, self.fps / 2),
-                           self.fps)  # hard code clamp duration to half second to one second
+        if onset_duration <= self.beat_duration * self.fps * 4:
+            pattern_type = "TapPattern"
+            t = onset_time
+            starting_t = t
+            ending_t = t + self.beat_duration * self.fps
+        else:
+            pattern_type = random.choice(["Line", "CubicBezier", "Arc"])
+            t = onset_time
+            starting_t = t
+            ending_t = t + onset_duration / 16
+            length = 100 / (self.beat_duration * self.fps) * onset_duration / 4
+
         color = (random.randint(150, 255), random.randint(150, 255), random.randint(150, 255))
         if pattern_type == "TapPattern":
             position = circle_position
@@ -112,7 +118,7 @@ class PatternManager:
             position1 = circle_position
             position2 = np.array([random.uniform(0, self.screen_width), random.uniform(0, self.screen_height)])
             line = Line(self.radius, self.stroke_width, position1, position2, color, starting_t, ending_t,
-                        self.lifetime, self.approach_rate, length=100)
+                        self.lifetime, self.approach_rate, length=length)
             self.add_pattern(line)
             self.last_onset_time = ending_t
         elif pattern_type == "CubicBezier":
@@ -121,7 +127,7 @@ class PatternManager:
             position3 = np.array([random.uniform(0, self.screen_width), random.uniform(0, self.screen_height)])
             position4 = np.array([random.uniform(0, self.screen_width), random.uniform(0, self.screen_height)])
             curve = CubicBezier(self.radius, self.stroke_width, position1, position2, position3, position4, color,
-                                starting_t, ending_t, self.lifetime, self.approach_rate, length=100)
+                                starting_t, ending_t, self.lifetime, self.approach_rate, length=length)
             self.add_pattern(curve)
             self.last_onset_time = ending_t
         else:
@@ -132,7 +138,7 @@ class PatternManager:
             curve_radius = random.uniform(dist / 1.7, dist / 1.05)
             curve_radius *= random.choice([-1, 1])  # negative curve radius inverts the curve direction
             curve = Arc(self.radius, self.stroke_width, position1, position2, curve_radius, color, starting_t,
-                        ending_t, self.lifetime, self.approach_rate, length=100)
+                        ending_t, self.lifetime, self.approach_rate, length=length)
             self.add_pattern(curve)
             self.last_onset_time = ending_t
 
