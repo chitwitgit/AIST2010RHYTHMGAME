@@ -236,9 +236,13 @@ class SliderPattern(ABC):
 
     def check_mouse(self, t, input_manager):
         if self.pressed:
+            total_time = self.ending_t - self.starting_t
+            p = (t - self.starting_t) / total_time
+            p = max(0, min(p, 1))  # clamp
+            pos = self._compute_coordinate(p)  # current position
             mouse_pos = input_manager.mouse_pos
             # more lenient on the position for sliding
-            is_inside_circle = np.linalg.norm(np.asarray(mouse_pos) - self.starting_point) < self.thickness * 2
+            is_inside_circle = np.linalg.norm(np.asarray(mouse_pos) - pos.flatten()) < self.thickness * 2
             if is_inside_circle and input_manager.is_user_holding:  # inside the circle and is clicking
                 return True
             else:
