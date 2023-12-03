@@ -7,29 +7,11 @@ from utils import notedetection
 from utils.youtubeDL import download_youtube_audio
 from utils.input_manager import InputManager
 import os
-from utils.cmdargs import args
+from utils.settings import settings
 from dataclasses import dataclass
 import threading
 
-if args.youtube is not None:
-    youtube_link = args.youtube
-else:
-    youtube_link = "https://www.youtube.com/watch?v=HFPBd_mQYhg"
-    youtube_link = "https://www.youtube.com/watch?v=fsrORJ4Spxc"
-
-if args.tempo is not None:
-    given_tempo = args.tempo
-else:
-    given_tempo = 76
-if args.difficulty is not None:
-    difficulty = args.difficulty
-else:
-    difficulty = 2  # usually (0, 10]
-if args.ar is not None:
-    approach_rate = args.ar
-else:
-    approach_rate = 10  # must be >0, usually [1, 10]
-
+youtube_link, given_tempo, difficulty, approach_rate, mode, is_use_new_files = settings
 
 @dataclass
 class GameData:
@@ -166,7 +148,7 @@ class GameScene:
 
         self.audio_file_full_path = None
         self.pattern_manager = None
-        self.mode = "debug x"
+        self.mode = mode
         self.debug_colors = None
         self.click_sound_effect = None
         self.music_data = None
@@ -188,8 +170,8 @@ class GameScene:
         pygame.mouse.set_visible(False)  # hides the cursor and will draw a cursor for playing rhythm game
 
     def run_expensive_operations(self):
-        self.load_assets(keep_files=True, use_new_files=False)  # if you want to try a new song
-        # self.load_assets(keep_files=True, use_new_files=False)  # if same song which has been downloaded
+        # set to True to skip downloading and processing
+        self.load_assets(keep_files=True, use_new_files=is_use_new_files)
 
         win = pygame.Surface((self.screen_width, self.screen_height))
         win.fill((0, 0, 0))
