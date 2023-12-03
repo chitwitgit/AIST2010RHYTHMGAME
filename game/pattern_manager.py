@@ -20,7 +20,7 @@ class PatternManager:
         self.approach_rate = approach_rate
 
         # difficulty dependent variables such as circle size and approach rate
-        self.radius = 50 - (difficulty - 1) * 2.5
+        self.radius = 80 - (difficulty - 1) * 5
         self.lifetime = 150 - approach_rate * 8
 
         self.last_onset_time = 0
@@ -60,38 +60,96 @@ class PatternManager:
         # print(onset_bars)
 
         # distances for each circle of a pattern and for each pattern depends on the difficulty
-        circle_distance = 80 + 25 * self.difficulty
-        pattern_distance = 300 + 15 * self.difficulty
-        circle_position = np.array([self.screen_width/2, self.screen_height/2])
+        circle_distance = 20 + 50 * self.difficulty
+        pattern_distance = 300 + 25 * self.difficulty
+        min_circle_distance = (self.y_range[1] - self.y_range[0]) / 2 - 50
+        bottom_left_corner = np.array([self.x_range[0], self.y_range[0]])
+        top_left_corner = np.array([self.x_range[0], self.y_range[1]])
+        bottom_right_corner = np.array([self.x_range[1], self.y_range[0]])
+        top_right_corner = np.array([self.x_range[1], self.y_range[1]])
         for onset_times, onset_durations in zip(onset_time_frames, onset_duration_frames):
             # compute the position of first circle of the current pattern/bar
-            angle = np.random.uniform(0, 2 * np.pi)
-            rand_pattern_distance = np.random.uniform(150, pattern_distance)
+            circle_position = None
 
-            # calculate the coordinates for first_position
-            delta_x = rand_pattern_distance * np.cos(angle)
-            delta_y = rand_pattern_distance * np.sin(angle)
-            x_coord = np.clip(self.last_circle_position[0] + delta_x, self.x_range[0], self.x_range[1])
-            y_coord = np.clip(self.last_circle_position[1] + delta_y, self.y_range[0], self.y_range[1])
+            max_possible_distance = max(np.linalg.norm(bottom_right_corner - self.last_circle_position),
+                                        np.linalg.norm(top_right_corner - self.last_circle_position),
+                                        np.linalg.norm(bottom_left_corner - self.last_circle_position),
+                                        np.linalg.norm(top_left_corner - self.last_circle_position))
+            if max_possible_distance < pattern_distance:
+                while circle_position is None or np.linalg.norm(circle_position - self.last_circle_position) != min_circle_distance:
+                    # Generate a random angle in radians
+                    angle = np.random.uniform(0, 2 * np.pi)
 
-            # update circle position
-            circle_position = np.array([x_coord, y_coord])
-            self.last_circle_position = circle_position
+                    # Calculate the coordinates for the circle_position
+                    delta_x = min_circle_distance * np.cos(angle)
+                    delta_y = min_circle_distance * np.sin(angle)
+                    x_coord = np.clip(self.last_circle_position[0] + delta_x, *self.x_range)
+                    y_coord = np.clip(self.last_circle_position[1] + delta_y, *self.y_range)
+
+                    # Check if the Euclidean distance is within the desired range
+                    if np.linalg.norm(np.array([x_coord, y_coord]) - self.last_circle_position) == min_circle_distance:
+                        circle_position = np.array([x_coord, y_coord])
+                        self.last_circle_position = circle_position
+                        break
+            else:
+                while circle_position is None or np.linalg.norm(circle_position - self.last_circle_position) != pattern_distance:
+                    # Generate a random angle in radians
+                    angle = np.random.uniform(0, 2 * np.pi)
+
+                    # Calculate the coordinates for the circle_position
+                    delta_x = pattern_distance * np.cos(angle)
+                    delta_y = pattern_distance * np.sin(angle)
+                    x_coord = np.clip(self.last_circle_position[0] + delta_x, *self.x_range)
+                    y_coord = np.clip(self.last_circle_position[1] + delta_y, *self.y_range)
+
+                    # Check if the Euclidean distance is within the desired range
+                    if np.linalg.norm(np.array([x_coord, y_coord]) - self.last_circle_position) == pattern_distance:
+                        circle_position = np.array([x_coord, y_coord])
+                        self.last_circle_position = circle_position
+                        break
             for onset_time, onset_duration in zip(onset_times, onset_durations):
-                # generate a random direction for patterns to move
-                angle = np.random.uniform(0, 2 * np.pi)
-                rand_circle_distance = np.random.uniform(100, circle_distance)
+                circle_position = None
 
-                # calculate the coordinates for first_position
-                delta_x = rand_circle_distance * np.cos(angle)
-                delta_y = rand_circle_distance * np.sin(angle)
-                x_coord = np.clip(self.last_circle_position[0] + delta_x, self.x_range[0], self.x_range[1])
-                y_coord = np.clip(self.last_circle_position[1] + delta_y, self.y_range[0], self.y_range[1])
+                max_possible_distance = max(np.linalg.norm(bottom_right_corner - self.last_circle_position),
+                                            np.linalg.norm(top_right_corner - self.last_circle_position),
+                                            np.linalg.norm(bottom_left_corner - self.last_circle_position),
+                                            np.linalg.norm(top_left_corner - self.last_circle_position))
+                if max_possible_distance < circle_distance:
+                    while circle_position is None or np.linalg.norm(
+                            circle_position - self.last_circle_position) != min_circle_distance:
+                        # Generate a random angle in radians
+                        angle = np.random.uniform(0, 2 * np.pi)
 
-                # update circle position
-                circle_position = np.array([x_coord, y_coord])
-                self.generate_object(onset_time, onset_duration, circle_position)
-                self.last_circle_position = circle_position
+                        # Calculate the coordinates for the circle_position
+                        delta_x = min_circle_distance * np.cos(angle)
+                        delta_y = min_circle_distance * np.sin(angle)
+                        x_coord = np.clip(self.last_circle_position[0] + delta_x, *self.x_range)
+                        y_coord = np.clip(self.last_circle_position[1] + delta_y, *self.y_range)
+
+                        # Check if the Euclidean distance is within the desired range
+                        if np.linalg.norm(
+                                np.array([x_coord, y_coord]) - self.last_circle_position) == min_circle_distance:
+                            circle_position = np.array([x_coord, y_coord])
+                            self.last_circle_position = circle_position
+                            break
+                else:
+                    while circle_position is None or np.linalg.norm(
+                            circle_position - self.last_circle_position) != circle_distance:
+                        # Generate a random angle in radians
+                        angle = np.random.uniform(0, 2 * np.pi)
+
+                        # Calculate the coordinates for the circle_position
+                        delta_x = circle_distance * np.cos(angle)
+                        delta_y = circle_distance * np.sin(angle)
+                        x_coord = np.clip(self.last_circle_position[0] + delta_x, *self.x_range)
+                        y_coord = np.clip(self.last_circle_position[1] + delta_y, *self.y_range)
+
+                        # Check if the Euclidean distance is within the desired range
+                        if np.linalg.norm(np.array([x_coord, y_coord]) - self.last_circle_position) == circle_distance:
+                            circle_position = np.array([x_coord, y_coord])
+                            self.generate_object(onset_time, onset_duration, circle_position)
+                            self.last_circle_position = circle_position
+                            break
 
     def generate_object(self, onset_time, onset_duration, circle_position):
         if onset_time - self.last_onset_time < 10:
@@ -107,7 +165,7 @@ class PatternManager:
             t = onset_time
             starting_t = t
             ending_t = t + onset_duration / 16
-            length = 100 / (self.beat_duration * self.fps) * onset_duration / 4
+            length = 100 / (self.beat_duration * self.fps) * onset_duration / 8
 
         color = (random.randint(150, 255), random.randint(150, 255), random.randint(150, 255))
         if pattern_type == "TapPattern":
