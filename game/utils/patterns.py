@@ -22,32 +22,21 @@ def apply_alpha(surf, alpha):
 @lru_cache(maxsize=None)
 def circle_surface(color, color_inner, thickness, stroke_width, scaling_factor):
     surface_size = max((int(thickness * scaling_factor) + 1), 1) * 2
-    surface = pygame.Surface((surface_size, surface_size), pygame.SRCALPHA)
-    pygame.draw.circle(surface, color,
-                       (surface_size // 2, surface_size // 2),
-                       thickness * scaling_factor)
-    pygame.draw.circle(surface, color_inner,
-                       (surface_size // 2, surface_size // 2),
-                       (thickness * scaling_factor - stroke_width))
-    return surface
+    ss_factor = 2
+    sup_width = surface_size * ss_factor
+    sup_height = surface_size * ss_factor
+    sup_surface = pygame.Surface((sup_width, sup_height), pygame.SRCALPHA)
 
+    pygame.draw.circle(sup_surface, color,
+                       (sup_width // 2, sup_height // 2),
+                       thickness * scaling_factor * ss_factor)
+    pygame.draw.circle(sup_surface, color_inner,
+                       (sup_width // 2, sup_height // 2),
+                       (thickness * scaling_factor - stroke_width) * ss_factor)
 
-"""def draw_approach_circle(win, point, relative_time_difference, thickness, stroke_width, approach_rate):
-    approach_constant = 100 / approach_rate
-    if abs(relative_time_difference) >= approach_constant:
-        return
-    else:
-        scaling_factor = 1 + (410 - (approach_rate - 1) * 40) * (-relative_time_difference) / approach_constant
-    alpha = (
-        255 - 255 * 1 / approach_constant ** 2 * relative_time_difference ** 2
-        if relative_time_difference < 0
-        else 255 - 255 * 1 / np.cbrt(approach_constant) * np.cbrt(relative_time_difference)
-    )
-    alpha = min(max(alpha, 0), 255)
-    circle = circle_surface((255, 255, 255, alpha), (0, 0, 0, 0),
-                            thickness, stroke_width, scaling_factor)
-    rect = circle.get_rect(center=point)
-    win.blit(circle, rect)"""
+    # Downsample the supersampled surface to the original size with antialiasing
+    downsampled_surface = pygame.transform.smoothscale(sup_surface, (surface_size, surface_size))
+    return downsampled_surface
 
 
 def draw_approach_circle(win, point, relative_time_difference, thickness, stroke_width, approach_rate):
@@ -139,7 +128,7 @@ class TapPattern:
             return False
         time_difference = t - self.t
         relative_time_difference = time_difference / 120
-        if -0.4 < relative_time_difference < 0.2:  # allow for early clicks but don't register clicks that are too late
+        if abs(relative_time_difference) < 0.3:
             # Get the current mouse position
             mouse_pos = input_manager.mouse_pos
             is_inside_circle = np.linalg.norm(np.asarray(mouse_pos) - self.point) < self.thickness
@@ -442,7 +431,7 @@ class CubicBezier(SliderPattern):
             self.P2 = self.P0 + vec2 * scale_ratio
             self.P3 = self.P0 + vec3 * scale_ratio
             self.points = self._compute_points()  # recalculate the points
-        self.subdivide_curve(accuracy=0.2)
+        self.subdivide_curve(accuracy=0.1)
         self.accumulated_lengths = np.cumsum(self.segment_lengths)
         self.normals = self._compute_normals()
         self.vertices = self._compute_vertices(self.radius)
@@ -481,14 +470,18 @@ class CubicBezier(SliderPattern):
         points = self._compute_point_helper(t)
         return np.transpose(points)
 
-    def _compute_normals(self):
-        t = self.ts
+    def _compute_normal(self, t):
         dx_dt = 3 * (1 - t) ** 2 * (self.P1[0] - self.P0[0]) + 6 * (1 - t) * t * (
                 self.P2[0] - self.P1[0]) + 3 * t ** 2 * (self.P3[0] - self.P2[0])
         dy_dt = 3 * (1 - t) ** 2 * (self.P1[1] - self.P0[1]) + 6 * (1 - t) * t * (
                 self.P2[1] - self.P1[1]) + 3 * t ** 2 * (self.P3[1] - self.P2[1])
         magnitudes = np.sqrt(dx_dt ** 2 + dy_dt ** 2)
         return np.column_stack((-dy_dt / magnitudes, dx_dt / magnitudes))
+
+    def _compute_normals(self):
+        t = self.ts
+        normals = self._compute_normal(t)
+        return np.array(normals)
 
     def _compute_vertices(self, width):
         vertices1 = self.points + width * self.normals
@@ -506,8 +499,26 @@ class CubicBezier(SliderPattern):
             t2 = t
             mid_pt = (point1 + point2) / 2
             mid_t = (t1 + t2) / 2
+            normal1 = self._compute_normal(t1).flatten()
+            normal1 = normal1 / np.linalg.norm(normal1)
+            normal2 = self._compute_normal(t2).flatten()
+            normal2 = normal2 / np.linalg.norm(normal2)
+            middle_normal = normal1 + normal2
+            middle_normal = middle_normal / np.linalg.norm(middle_normal)
+            actual_normal = self._compute_normal(mid_t).flatten()
+            actual_normal = actual_normal / np.linalg.norm(actual_normal)
+            # checks the smoothness of the normals calculated
+            dot_product = np.dot(normal1, normal2)
+            dot_product = np.clip(dot_product, -1, 1)
+            angle_smooth = abs(np.arccos(dot_product))
+            # checks the deviation between the interpolated normal and the actual normal
+            dot_product = np.dot(middle_normal, actual_normal)
+            dot_product = np.clip(dot_product, -1, 1)
+            angle_deviate = abs(np.arccos(dot_product))
             actual_point = np.asarray(self._compute_point_helper(mid_t).flatten())
-            if np.linalg.norm(mid_pt - actual_point) > accuracy:
+            if ((np.linalg.norm(mid_pt - actual_point) > accuracy)
+                    or (angle_smooth > accuracy)
+                    or (angle_deviate > accuracy)):
                 #  insert point between the points
                 new_points.append(actual_point)
                 new_ts.append(mid_t)
