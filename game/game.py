@@ -78,16 +78,14 @@ class Game:
             int(cursor_pressed_img.get_height() * cursor_img_scale_factor)))
         cursor_pressed_img_rect = cursor_pressed_img.get_rect()
 
-        cursor_images = (cursor_img, cursor_img_rect, cursor_pressed_img, cursor_pressed_img_rect)
+        self.cursor_images = (cursor_img, cursor_img_rect, cursor_pressed_img, cursor_pressed_img_rect)
 
-        self.game_scene = GameScene(self.window, self.data, cursor_images)
-        self.pause_scene = PauseScene(self.window, cursor_images)
-        self.menu_scene = MenuScene(self.window, self.data, cursor_images)
-        self.end_scene = EndScene(self.window, self.data, cursor_images)
-        task = self.game_scene.run_expensive_operations
-        # assign expensive task to loading scene to run in parallel
-        self.loading_scene = LoadingScene(self.window, task, cursor_images)
-        self.current_scene = self.loading_scene
+        self.menu_scene = MenuScene(self.window, self.data, self.cursor_images)
+        self.current_scene = self.menu_scene
+        self.game_scene = None
+        self.pause_scene = None
+        self.loading_scene = None
+        self.end_scene = None
 
     def run(self, seed=None):
         running = True
@@ -99,11 +97,15 @@ class Game:
                 self.resume_game()
             if state == "Menu":
                 self.menu()
+            if state == "Loading Finished":
+                self.resume_game()  # add a ready screen if needed, ready then play
             if state == "Stop Game":
                 self.close()
                 running = False
-            if state == "End":  # add end screen if needed
+            if state == "End":
                 self.end()
+            if state == "Load":
+                self.load()
 
     def pause_game(self):
         self.current_scene = self.pause_scene
@@ -120,6 +122,15 @@ class Game:
         self.data.highest_combo = max(self.data.combo, self.data.highest_combo)
         self.end_scene.end_click = False
         self.current_scene = self.end_scene
+
+    def load(self):
+        self.game_scene = GameScene(self.window, self.data, self.cursor_images)
+        self.pause_scene = PauseScene(self.window, self.cursor_images)
+        task = self.game_scene.run_expensive_operations
+        # assign expensive task to loading scene to run in parallel
+        self.loading_scene = LoadingScene(self.window, task, self.cursor_images)
+        self.end_scene = EndScene(self.window, self.data, self.cursor_images)
+        self.current_scene = self.loading_scene
 
     def close(self):
         if self.window is not None:
@@ -511,7 +522,7 @@ class MenuScene:
                 if event.type == pygame.QUIT:
                     return "Stop Game"
             if self.start_click:
-                return "Resume"
+                return "Load"
 
     def render(self):
         pygame.mouse.set_visible(False)  # hides the cursor and will draw a cursor for playing rhythm game
@@ -722,7 +733,7 @@ class LoadingScene:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         return "Stop Game"
-        return "Menu"
+        return "Loading Finished"
 
     def render(self):
         pygame.mouse.set_visible(False)  # hides the cursor and will draw a cursor for playing rhythm game
