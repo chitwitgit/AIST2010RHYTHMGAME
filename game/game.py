@@ -15,7 +15,7 @@ if args.youtube is not None:
     youtube_link = args.youtube
 else:
     youtube_link = "https://www.youtube.com/watch?v=HFPBd_mQYhg"
-    youtube_link = "https://www.youtube.com/watch?v=i0K40f-6mLs"
+    youtube_link = "https://www.youtube.com/watch?v=fsrORJ4Spxc"
 
 if args.tempo is not None:
     given_tempo = args.tempo
@@ -49,8 +49,8 @@ class Game:
         self.current_scene = None
         self.menu_scene = None
         self.end_scene = None
-        self.screen_width = 800
-        self.screen_height = 450
+        self.screen_width = 1200
+        self.screen_height = 675
         self.data = GameData(
             difficulty=difficulty,
             score=0,
