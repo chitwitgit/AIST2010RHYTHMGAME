@@ -61,12 +61,12 @@ class PatternManager:
 
         # distances for each circle of a pattern and for each pattern depends on the difficulty
         circle_distance = 20 + 50 * self.difficulty
-        pattern_distance = 300 + 25 * self.difficulty
-        min_circle_distance = (self.y_range[1] - self.y_range[0]) / 2 - 50
+        pattern_distance = 800 + 15 * self.difficulty
         bottom_left_corner = np.array([self.x_range[0], self.y_range[0]])
         top_left_corner = np.array([self.x_range[0], self.y_range[1]])
         bottom_right_corner = np.array([self.x_range[1], self.y_range[0]])
         top_right_corner = np.array([self.x_range[1], self.y_range[1]])
+        min_circle_distance = np.linalg.norm(top_right_corner - bottom_left_corner) / 2 - 50
         for onset_times, onset_durations in zip(onset_time_frames, onset_duration_frames):
             # compute the position of first circle of the current pattern/bar
             circle_position = None
@@ -108,15 +108,12 @@ class PatternManager:
                         self.last_circle_position = circle_position
                         break
             for onset_time, onset_duration in zip(onset_times, onset_durations):
-                circle_position = None
-
                 max_possible_distance = max(np.linalg.norm(bottom_right_corner - self.last_circle_position),
                                             np.linalg.norm(top_right_corner - self.last_circle_position),
                                             np.linalg.norm(bottom_left_corner - self.last_circle_position),
                                             np.linalg.norm(top_left_corner - self.last_circle_position))
                 if max_possible_distance < circle_distance:
-                    while circle_position is None or np.linalg.norm(
-                            circle_position - self.last_circle_position) != min_circle_distance:
+                    while np.linalg.norm(circle_position - self.last_circle_position) != min_circle_distance:
                         # Generate a random angle in radians
                         angle = np.random.uniform(0, 2 * np.pi)
 
@@ -130,6 +127,7 @@ class PatternManager:
                         if np.linalg.norm(
                                 np.array([x_coord, y_coord]) - self.last_circle_position) == min_circle_distance:
                             circle_position = np.array([x_coord, y_coord])
+                            self.generate_object(onset_time, onset_duration, circle_position)
                             self.last_circle_position = circle_position
                             break
                 else:
