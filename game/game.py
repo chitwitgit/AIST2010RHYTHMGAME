@@ -117,7 +117,7 @@ class Game:
         self.current_scene = self.menu_scene
 
     def end(self):
-        self.end_scene.update_display_data()
+        self.data.highest_combo = max(self.data.combo, self.data.highest_combo)
         self.end_scene.end_click = False
         self.current_scene = self.end_scene
 
@@ -609,12 +609,6 @@ class EndScene:
         self.end_label_text = "END"
         self.label_font = pygame.font.Font(None, 36)
         self.label_color = (255, 255, 255)  # White color
-
-    def update_display_data(self):
-        self.perfect_count = "{}".format(self.data.perfect_count)
-        self.miss_count = "{}".format(self.data.miss_count)
-        self.highest_combo = "{}".format(self.data.highest_combo)
-        self.total_score = "{}".format(self.data.score)
 
     def run(self, seed=None):
         while not self.end_click:
