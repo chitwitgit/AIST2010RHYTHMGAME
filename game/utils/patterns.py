@@ -22,7 +22,7 @@ def apply_alpha(surf, alpha):
 @lru_cache(maxsize=None)
 def circle_surface(color, color_inner, thickness, stroke_width, scaling_factor):
     surface_size = max((int(thickness * scaling_factor) + 1), 1) * 2
-    ss_factor = 2
+    ss_factor = 4
     sup_width = surface_size * ss_factor
     sup_height = surface_size * ss_factor
     sup_surface = pygame.Surface((sup_width, sup_height), pygame.SRCALPHA)
@@ -60,7 +60,7 @@ def draw_approach_circle(win, point, relative_time_difference, thickness, stroke
 
 
 def draw_clicked_circle(win, point, relative_time_difference, thickness, stroke_width):
-    if abs(relative_time_difference) >= 0.3:
+    if relative_time_difference >= 0.3 or relative_time_difference < 0:
         return
     scaling_factor = np.sqrt(1 + 8 * relative_time_difference)
     alpha = 255 - 255 * 1 / np.cbrt(0.3) * np.cbrt(relative_time_difference)
@@ -149,7 +149,7 @@ class TapPattern:
         interpolation_factor = min(abs(time_difference) / (self.lifetime / 2), 1)
         alpha = round(255 * (1 - interpolation_factor))
 
-        alpha = max(0, min(alpha, 255))  # Clamp alpha between 0 and 255
+        alpha = int(max(0, min(alpha, 255)))  # Clamp alpha between 0 and 255
         if alpha == 0:
             return t >= self.t
         if alpha < 255:
@@ -192,7 +192,7 @@ class SliderPattern(ABC):
         self.vertices = vertices
         self.vertices_outer = vertices_outer
         self.starting_t = starting_t
-        self.ending_t = ending_t
+        self.ending_t = int(ending_t)
         self.lifetime = lifetime
         self._prerendered_frame = None
         self.pressed = False
@@ -307,11 +307,16 @@ class SliderPattern(ABC):
             interpolation_factor = min(abs(time_difference) / (self.lifetime / 2), 1)
             alpha = round(255 * (1 - interpolation_factor))
 
-        alpha = max(0, min(alpha, 255))  # Clamp alpha between 0 and 255
+        alpha = int(max(0, min(alpha, 255)))  # Clamp alpha between 0 and 255
         if alpha == 0:
             return t >= self.ending_t
-        frame = apply_alpha(self._prerendered_frame, alpha)
-        win.blit(frame, (0, 0))
+        if alpha == 0:
+            return t >= self.t
+        if alpha < 255:
+            frame = apply_alpha(self._prerendered_frame, alpha)
+            win.blit(frame, (0, 0))
+        else:
+            win.blit(self._prerendered_frame, (0, 0))
         self.render_based_on_time(win, t)
         self.render_based_on_pressed(win, t)
         return False
@@ -493,46 +498,55 @@ class CubicBezier(SliderPattern):
         return np.concatenate((vertices1, vertices2[::-1]), axis=0)
 
     def _subdivide_curve(self, points, ts, accuracy):
+        def normalize(vector):
+            return vector / np.linalg.norm(vector)
+
         point1 = points[0]
         t1 = ts[0]
-        new_points = [points[0]]
-        new_ts = [ts[0]]
+        new_points = [point1]
+        new_ts = [t1]
         finished = True
+
         for point, t in zip(points[1:], ts[1:]):
             point2 = point
             t2 = t
+
             mid_pt = (point1 + point2) / 2
             mid_t = (t1 + t2) / 2
-            normal1 = self._compute_normal(t1).flatten()
-            normal1 = normal1 / np.linalg.norm(normal1)
-            normal2 = self._compute_normal(t2).flatten()
-            normal2 = normal2 / np.linalg.norm(normal2)
-            middle_normal = normal1 + normal2
-            middle_normal = middle_normal / np.linalg.norm(middle_normal)
-            actual_normal = self._compute_normal(mid_t).flatten()
-            actual_normal = actual_normal / np.linalg.norm(actual_normal)
-            # checks the smoothness of the normals calculated
-            dot_product = np.dot(normal1, normal2)
-            dot_product = np.clip(dot_product, -1, 1)
-            angle_smooth = abs(np.arccos(dot_product))
-            # checks the deviation between the interpolated normal and the actual normal
-            dot_product = np.dot(middle_normal, actual_normal)
-            dot_product = np.clip(dot_product, -1, 1)
-            angle_deviate = abs(np.arccos(dot_product))
+
+            normal1 = normalize(self._compute_normal(t1).flatten())
+            normal2 = normalize(self._compute_normal(t2).flatten())
+            middle_normal = normalize(normal1 + normal2)
+            actual_normal = normalize(self._compute_normal(mid_t).flatten())
+
+            # Check the smoothness of the normals calculated
+            dot_product_smooth = np.dot(normal1, normal2)
+            angle_smooth = abs(np.arccos(np.clip(dot_product_smooth, -1, 1)))
+
+            # Check the deviation between the interpolated normal and the actual normal
+            dot_product_deviate = np.dot(middle_normal, actual_normal)
+            angle_deviate = abs(np.arccos(np.clip(dot_product_deviate, -1, 1)))
+
             actual_point = np.asarray(self._compute_point_helper(mid_t).flatten())
-            if ((np.linalg.norm(mid_pt - actual_point) > accuracy)
-                    or (angle_smooth > accuracy)
-                    or (angle_deviate > accuracy)):
-                #  insert point between the points
+
+            if (
+                    np.linalg.norm(mid_pt - actual_point) > accuracy
+                    or angle_smooth > accuracy / 2 / np.pi
+                    or angle_deviate > accuracy / 2 / np.pi
+            ):
+                # Insert point between the points
                 new_points.append(actual_point)
                 new_ts.append(mid_t)
                 finished = False
+
             new_points.append(point)
             new_ts.append(t)
             point1 = point
             t1 = t
+
         if not finished:
-            new_points, new_ts = list(self._subdivide_curve(np.array(new_points), np.array(new_ts), accuracy))
+            new_points, new_ts = self._subdivide_curve(np.array(new_points), np.array(new_ts), accuracy)
+
         return np.asarray(new_points), np.asarray(new_ts)
 
     def subdivide_curve(self, accuracy):

@@ -13,6 +13,7 @@ import threading
 
 youtube_link, given_tempo, difficulty, approach_rate, mode, is_use_new_files = settings
 
+
 @dataclass
 class GameData:
     difficulty: int
@@ -176,6 +177,7 @@ class GameScene:
         win = pygame.Surface((self.screen_width, self.screen_height))
         win.fill((0, 0, 0))
         self.pattern_manager.generate_map(self.music_data)
+        self.pattern_manager.hot_load_caches()
         self.pattern_manager.prerender_patterns(win)
         if self.mode == "debug":
             self.debug_mode_setup()

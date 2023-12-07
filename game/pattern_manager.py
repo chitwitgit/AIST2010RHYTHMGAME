@@ -1,4 +1,7 @@
 import random
+
+import pygame
+
 from utils.patterns import *
 from itertools import groupby
 
@@ -76,7 +79,8 @@ class PatternManager:
                                         np.linalg.norm(bottom_left_corner - self.last_circle_position),
                                         np.linalg.norm(top_left_corner - self.last_circle_position))
             if max_possible_distance < pattern_distance:
-                while circle_position is None or np.linalg.norm(circle_position - self.last_circle_position) != min_circle_distance:
+                while circle_position is None or np.linalg.norm(
+                        circle_position - self.last_circle_position) != min_circle_distance:
                     # Generate a random angle in radians
                     angle = np.random.uniform(0, 2 * np.pi)
 
@@ -92,7 +96,8 @@ class PatternManager:
                         self.last_circle_position = circle_position
                         break
             else:
-                while circle_position is None or np.linalg.norm(circle_position - self.last_circle_position) != pattern_distance:
+                while circle_position is None or np.linalg.norm(
+                        circle_position - self.last_circle_position) != pattern_distance:
                     # Generate a random angle in radians
                     angle = np.random.uniform(0, 2 * np.pi)
 
@@ -229,3 +234,25 @@ class PatternManager:
                     self.pattern_queue.append(self.patterns[self.queue_length])
                 flag = isHit and pattern.score > 0
         return flag
+
+    def hot_load_caches(self):
+        surf = pygame.Surface((self.screen_width, self.screen_height))
+        example_t = self.lifetime * 3  # at the middle
+        for t in range(example_t * 2):
+            # Calculate the transparency based on the t value and lifetime
+            time_difference = t - example_t
+            interpolation_factor = min(abs(time_difference) / (self.lifetime / 2), 1)
+            alpha = round(255 * (1 - interpolation_factor))
+
+            alpha = int(max(0, min(alpha, 255)))  # Clamp alpha between 0 and 255
+            if alpha == 0:
+                continue
+            if alpha < 255:
+                apply_alpha(surf, alpha)
+            relative_time_difference = time_difference / self.lifetime
+            draw_approach_circle(surf, (self.screen_width // 2, self.screen_height // 2),
+                                 relative_time_difference, self.radius + self.stroke_width,
+                                 self.stroke_width, self.approach_rate)
+            draw_clicked_circle(surf, (self.screen_width // 2, self.screen_height // 2),
+                                relative_time_difference, self.radius + self.stroke_width,
+                                self.stroke_width)
