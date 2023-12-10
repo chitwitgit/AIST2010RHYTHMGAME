@@ -132,7 +132,7 @@ class GameScene:
         self.fps = 60
         self.seed = 777
         self.color = (255, 255, 255)
-        self.font = pygame.font.Font(None, 32)
+        self.font = pygame.font.Font(None, 64)
         self.data = data
         self.combo_text = "Combo: {}".format(self.data.combo)
         self.combo_label = self.font.render(self.combo_text, True, (255, 255, 255))
@@ -425,7 +425,7 @@ class PauseScene:
         pygame.display.update()
 
     def countdown(self):
-        font = pygame.font.Font(None, 100)  # Font for the countdown numbers
+        font = pygame.font.Font(None, 150)  # Font for the countdown numbers
         countdown_time = 3
         fps = 60
         for i in range(countdown_time * fps):
@@ -474,29 +474,30 @@ class MenuScene:
         self.approach_rate_label_text = "Approach Rate:"
         self.start_label_text = "START"
         self.menu_label_text = "MENU"
-        self.label_font = pygame.font.Font(None, 36)
+
+        self.label_font = pygame.font.Font(None, 60)
         self.label_color = (255, 255, 255)  # White color
 
         # Define button properties
-        self.button_width, self.button_height = 30, 30
-        self.button_margin = 5
+        self.button_width, self.button_height = 60, 60
+        self.button_margin = 10
         self.button_color = (0, 0, 0)
-        self.button_font = pygame.font.Font(None, 30)
+        self.button_font = pygame.font.Font(None, 60)
         self.button_text_color = (255, 255, 255)  # White color
 
         # Calculate total width for buttons and margins
         self.total_width = (self.button_width + self.button_margin) * 10 - self.button_margin
-        self.start_x = 300
-        self.difficulty_button_pos_y = (self.screen_height - self.button_height) // 3 + 25
-        self.approach_rate_button_pos_y = (self.screen_height - self.button_height) // 3 * 2 - 25
+        self.start_x = 450
+        self.difficulty_button_pos_y = (self.screen_height - self.button_height) // 3 + 50
+        self.approach_rate_button_pos_y = (self.screen_height - self.button_height) // 3 * 2 - 50
 
         # Calculate label position
-        self.difficulty_label_pos_x = self.start_x - self.label_font.size(self.difficulty_label_text)[0] - 10
-        self.approach_rate_label_pos_x = self.start_x - self.label_font.size(self.approach_rate_label_text)[0] - 10
+        self.difficulty_label_pos_x = self.start_x - self.label_font.size(self.difficulty_label_text)[0] - 20
+        self.approach_rate_label_pos_x = self.start_x - self.label_font.size(self.approach_rate_label_text)[0] - 20
         self.difficulty_label_pos_y = (self.screen_height - self.label_font.size(self.difficulty_label_text)[
-            1]) // 3 + 25
+            1]) // 3 + 50
         self.approach_rate_label_pos_y = (self.screen_height - self.label_font.size(self.approach_rate_label_text)[
-            1]) // 3 * 2 - 25
+            1]) // 3 * 2 - 50
 
     def run(self, seed=None):
         while not self.start_click:
@@ -602,7 +603,7 @@ class EndScene:
         self.total_score_label_text = "Total Score:"
         self.total_score = "{}".format(self.data.score)
         self.end_label_text = "END"
-        self.label_font = pygame.font.Font(None, 36)
+        self.label_font = pygame.font.Font(None, 72)
         self.label_color = (255, 255, 255)  # White color
 
     def run(self, seed=None):
@@ -625,52 +626,52 @@ class EndScene:
 
         # Set Game Over Label
         label_surface = self.label_font.render(self.game_over_label_text, True, self.label_color)
-        label_rect = label_surface.get_rect(center=(self.screen_width // 2, 75))
+        label_rect = label_surface.get_rect(center=(self.screen_width // 2, 100))
         win.blit(label_surface, label_rect)
 
         # Set Perfect Count Label
         label_surface = self.label_font.render(self.perfect_count_label_text, True, self.label_color)
-        label_rect = label_surface.get_rect(topright=(450, 150))
+        label_rect = label_surface.get_rect(topright=(750, 200))
         win.blit(label_surface, label_rect)
 
         self.perfect_count = "{}".format(self.data.perfect_count)
         label_surface = self.label_font.render(self.perfect_count, True, self.label_color)
-        label_rect = label_surface.get_rect(topleft=(500, 150))
+        label_rect = label_surface.get_rect(topleft=(850, 200))
         win.blit(label_surface, label_rect)
 
         # Set Miss Count Label
         label_surface = self.label_font.render(self.miss_count_label_text, True, self.label_color)
-        label_rect = label_surface.get_rect(topright=(450, 200))
+        label_rect = label_surface.get_rect(topright=(750, 280))
         win.blit(label_surface, label_rect)
 
         self.miss_count = "{}".format(self.data.miss_count)
         label_surface = self.label_font.render(self.miss_count, True, self.label_color)
-        label_rect = label_surface.get_rect(topleft=(500, 200))
+        label_rect = label_surface.get_rect(topleft=(850, 280))
         win.blit(label_surface, label_rect)
 
         # Set Highest Combo Label
         label_surface = self.label_font.render(self.highest_combo_label_text, True, self.label_color)
-        label_rect = label_surface.get_rect(topright=(450, 250))
+        label_rect = label_surface.get_rect(topright=(750, 360))
         win.blit(label_surface, label_rect)
 
         self.highest_combo = "{}".format(self.data.highest_combo)
         label_surface = self.label_font.render(self.highest_combo, True, self.label_color)
-        label_rect = label_surface.get_rect(topleft=(500, 250))
+        label_rect = label_surface.get_rect(topleft=(850, 360))
         win.blit(label_surface, label_rect)
 
         # Set Total Score Label
         label_surface = self.label_font.render(self.total_score_label_text, True, self.label_color)
-        label_rect = label_surface.get_rect(topright=(450, 300))
+        label_rect = label_surface.get_rect(topright=(750, 440))
         win.blit(label_surface, label_rect)
 
         self.total_score = "{}".format(self.data.score)
         label_surface = self.label_font.render(self.total_score, True, self.label_color)
-        label_rect = label_surface.get_rect(topleft=(500, 300))
+        label_rect = label_surface.get_rect(topleft=(850, 440))
         win.blit(label_surface, label_rect)
 
         # End button
         button_surface = self.label_font.render(self.end_label_text, True, self.label_color)
-        button_rect = button_surface.get_rect(center=(self.screen_width // 2, 400))
+        button_rect = button_surface.get_rect(center=(self.screen_width // 2, 600))
         win.blit(button_surface, button_rect)
 
         if button_rect.collidepoint(pygame.mouse.get_pos()):
@@ -724,7 +725,7 @@ class LoadingScene:
         win = pygame.Surface((self.screen_width, self.screen_height))
         win.fill((0, 0, 0))
 
-        font = pygame.font.Font(None, 50)  # Font for the score numbers
+        font = pygame.font.Font(None, 70)  # Font for the score numbers
         loading_text = font.render("LOADING ...", True, (255, 255, 255))
         loading_text_rect = loading_text.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
         win.blit(loading_text, loading_text_rect)
