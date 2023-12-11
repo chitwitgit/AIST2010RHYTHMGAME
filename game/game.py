@@ -6,6 +6,7 @@ from pygame import mixer
 from utils import notedetection
 from utils.youtubeDL import download_youtube_audio
 from utils.input_manager import InputManager
+from utils.button import Button
 import os
 from utils.settings import settings
 from dataclasses import dataclass
@@ -70,6 +71,7 @@ class Game:
         self.game_scene = None
         self.pause_scene = None
         self.loading_scene = None
+        self.ready_scene = None
         self.end_scene = None
 
     def run(self):
@@ -78,12 +80,14 @@ class Game:
             state = self.current_scene.run()
             if state == "Pause":
                 self.pause_game()
+            if state == "Play":
+                self.play_game()
             if state == "Resume":
                 self.resume_game()
             if state == "Menu":
                 self.menu()
             if state == "Loading Finished":
-                self.resume_game()  # add a ready screen if needed, ready then play
+                self.confirm_ready()
             if state == "Stop Game":
                 self.close()
                 running = False  # break the loop
@@ -98,8 +102,11 @@ class Game:
         # obtain the last screen displayed and save it to paused scene
         self.pause_scene.paused_screen = self.game_scene.window_buffer
 
-    def resume_game(self):
+    def play_game(self):
         self.current_scene = self.game_scene
+
+    def resume_game(self):
+        self.play_game()
 
     def menu(self):
         self.menu_scene.start_click = False
@@ -120,8 +127,12 @@ class Game:
         task = self.game_scene.run_expensive_operations
         self.loading_scene = LoadingScene(self.window, task, self.cursor_images)
 
+        self.ready_scene = ReadyScene(self.window, self.cursor_images)
         self.end_scene = EndScene(self.window, self.data, self.cursor_images)
         self.current_scene = self.loading_scene
+
+    def confirm_ready(self):
+        self.current_scene = self.ready_scene
 
     def close(self):
         if self.window is not None:
@@ -835,6 +846,59 @@ class LoadingScene:
         loading_text = font.render("LOADING ...", True, (255, 255, 255))
         loading_text_rect = loading_text.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
         win.blit(loading_text, loading_text_rect)
+
+        cursor_img, cursor_img_rect, cursor_pressed_img, cursor_pressed_img_rect = self.cursor_images
+        if self.input_manager.is_mouse_holding:
+            cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
+            win.blit(cursor_pressed_img, cursor_pressed_img_rect)  # draw the cursor
+        else:
+            cursor_img_rect.center = pygame.mouse.get_pos()
+            win.blit(cursor_img, cursor_img_rect)
+
+        self.window.blit(win, win.get_rect())
+        pygame.event.pump()
+        pygame.display.update()
+        self.clock.tick(60)
+
+
+class ReadyScene:
+    def __init__(self, window, cursor_images):
+        self.play_selected = False
+        self.window = window
+        self.screen_width, self.screen_height = window.get_size()
+        self.input_manager = InputManager()
+        self.clock = pygame.time.Clock()
+        self.cursor_images = cursor_images
+
+    def run(self):
+        while not self.play_selected:
+            self.input_manager.update()
+            self.render()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return "Stop Game"
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        return "Stop Game"
+        return "Play"
+
+    def render(self):
+        pygame.mouse.set_visible(False)  # hides the cursor and will draw a cursor for playing rhythm game
+        win = pygame.Surface((self.screen_width, self.screen_height))
+        win.fill((0, 0, 0))
+
+        font = pygame.font.Font(None, 70)  # Font for the score numbers
+        loading_text = font.render("Loading Finished", True, (255, 255, 255))
+        loading_text_rect = loading_text.get_rect(center=(self.screen_width // 2, self.screen_height // 2 - 100))
+        win.blit(loading_text, loading_text_rect)
+
+        button_surface = font.render("Play", True, (255, 255, 255))
+        button_rect = button_surface.get_rect(center=(self.screen_width // 2, self.screen_height // 2 + 20))
+        win.blit(button_surface, button_rect)
+
+        if button_rect.collidepoint(pygame.mouse.get_pos()):
+            if self.input_manager.is_mouse_clicked:  # Left mouse button pressed
+                self.play_selected = True
 
         cursor_img, cursor_img_rect, cursor_pressed_img, cursor_pressed_img_rect = self.cursor_images
         if self.input_manager.is_mouse_holding:
