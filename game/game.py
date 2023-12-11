@@ -11,29 +11,27 @@ from utils.settings import settings
 from dataclasses import dataclass
 import threading
 
-youtube_link, given_tempo, difficulty, approach_rate, mode, is_use_new_files = settings
+youtube_link, given_tempo, difficulty, approach_rate, mode, is_use_new_files, use_game_background = settings
 
 
+# A dataclass storing some variables about the game
 @dataclass
 class GameData:
-    difficulty: int
+    difficulty: int  # Range: 1-10
     score: int
-    approach_rate: int
-    combo: int
-    highest_combo: int
-    perfect_count: int
-    miss_count: int
+    approach_rate: int  # Range: 1-10
+    combo: int  # Current combo count
+    highest_combo: int  # Highest combo count
+    perfect_count: int  # Number of perfect hits by the player
+    miss_count: int  # Number of misses by the player
 
 
 class Game:
+    """
+    The Game class manages the control flow of different scenes
+    """
     def __init__(self):
-        self.game_scene = None
-        self.pause_scene = None
-        self.current_scene = None
-        self.menu_scene = None
-        self.end_scene = None
-        self.screen_width = 1200
-        self.screen_height = 675
+        self.screen_width, self.screen_height = 1200, 675
         self.data = GameData(
             difficulty=difficulty,
             score=0,
@@ -43,11 +41,14 @@ class Game:
             perfect_count=0,
             miss_count=0
         )
+
+        # Initialize Pygame
         pygame.init()
         pygame.display.init()
         self.window = pygame.display.set_mode((self.screen_width, self.screen_height),
                                               pygame.HWSURFACE | pygame.DOUBLEBUF)
 
+        # Load the image for the cursor
         cursor_img_scale_factor = 1.5
         cursor_img = pygame.image.load('data/images/cursor.png').convert_alpha()
         cursor_img = pygame.transform.smoothscale(cursor_img, (
@@ -63,6 +64,7 @@ class Game:
 
         self.cursor_images = (cursor_img, cursor_img_rect, cursor_pressed_img, cursor_pressed_img_rect)
 
+        # Declare game scenes
         self.menu_scene = MenuScene(self.window, self.data, self.cursor_images)
         self.current_scene = self.menu_scene
         self.game_scene = None
@@ -70,10 +72,10 @@ class Game:
         self.loading_scene = None
         self.end_scene = None
 
-    def run(self, seed=None):
+    def run(self):
         running = True
         while running:
-            state = self.current_scene.run(seed)
+            state = self.current_scene.run()
             if state == "Pause":
                 self.pause_game()
             if state == "Resume":
@@ -84,7 +86,8 @@ class Game:
                 self.resume_game()  # add a ready screen if needed, ready then play
             if state == "Stop Game":
                 self.close()
-                running = False
+                running = False  # break the loop
+                print("Game Closed")
             if state == "End":
                 self.end()
             if state == "Load":
@@ -92,6 +95,7 @@ class Game:
 
     def pause_game(self):
         self.current_scene = self.pause_scene
+        # obtain the last screen displayed and save it to paused scene
         self.pause_scene.paused_screen = self.game_scene.window_buffer
 
     def resume_game(self):
@@ -102,16 +106,20 @@ class Game:
         self.current_scene = self.menu_scene
 
     def end(self):
+        # update highest combo value
         self.data.highest_combo = max(self.data.combo, self.data.highest_combo)
         self.end_scene.end_click = False
         self.current_scene = self.end_scene
 
     def load(self):
+        # Once the settings are finalized, initialize the other scenes accordingly
         self.game_scene = GameScene(self.window, self.data, self.cursor_images)
         self.pause_scene = PauseScene(self.window, self.cursor_images)
+
+        # assign expensive task to loading scene to run in a separate thread
         task = self.game_scene.run_expensive_operations
-        # assign expensive task to loading scene to run in parallel
         self.loading_scene = LoadingScene(self.window, task, self.cursor_images)
+
         self.end_scene = EndScene(self.window, self.data, self.cursor_images)
         self.current_scene = self.loading_scene
 
@@ -122,15 +130,21 @@ class Game:
 
 
 class GameScene:
+    """
+    Contains all the logic in the main gameplay loop
+    """
     def __init__(self, window, data, cursor_images):
         self.screen_width, self.screen_height = window.get_size()
 
         self.window = window
         self.clock = None
         self.steps = 0
+        # Stores number of real steps passed based on real time, used to correct for lag and sync up audio with game
         self.real_time_steps = 0
+
         self.fps = 60
         self.seed = 777
+
         self.color = (255, 255, 255)
         self.font = pygame.font.Font(None, 64)
         self.data = data
@@ -163,7 +177,7 @@ class GameScene:
                                               difficulty=self.data.difficulty,
                                               approach_rate=self.data.approach_rate,
                                               tempo=given_tempo)
-        self.window_buffer = None
+        self.window_buffer = pygame.Surface((self.screen_width, self.screen_height))
 
         random.seed(self.seed)
         if self.clock is None:
@@ -171,6 +185,9 @@ class GameScene:
         pygame.mouse.set_visible(False)  # hides the cursor and will draw a cursor for playing rhythm game
 
     def run_expensive_operations(self):
+        """
+        Collect all expensive tasks to pass to the loading scene to run in a separate thread
+        """
         # set to True to skip downloading and processing
         self.load_assets(keep_files=True, use_new_files=is_use_new_files)
 
@@ -183,6 +200,13 @@ class GameScene:
             self.debug_mode_setup()
 
     def load_assets(self, keep_files=True, use_new_files=False):
+        """
+        Loads files for the audio and computed musical information
+        :param keep_files: Saves the files to the disk when finished
+        :param use_new_files: Deletes the saved files and use new ones, set to True if selecting a new song,
+        False if load from existing files
+        """
+
         file_path = os.path.join("data", "audio")
         file_name = "audio.mp3"
         self.audio_file_full_path = os.path.join(file_path, file_name)
@@ -190,7 +214,9 @@ class GameScene:
         onset_durations_file = os.path.join("data", "onset_durations.npy")
         onset_bars_file = os.path.join("data", "onset_bars.npy")
         tempo_file = os.path.join("data", "tempo.npy")
+
         if use_new_files:
+            # Remove all the existing files
             if os.path.exists(self.audio_file_full_path):
                 os.remove(self.audio_file_full_path)
 
@@ -206,16 +232,46 @@ class GameScene:
             if os.path.exists(tempo_file):
                 os.remove(tempo_file)
 
+        # Download audio from YouTube if there is no audio at the specified path
         is_from_youtube = not os.path.exists(self.audio_file_full_path)
         if is_from_youtube:
             youtube_url = youtube_link
             download_youtube_audio(youtube_url, file_path, file_name)
         else:
             print("File already exists. Skipping download.")
-        if self.background is None:
-            background = pygame.image.load("data/images/furina.jpg").convert()
+
+        # Set game background if desired
+        if self.background is None and use_game_background:
+            background = pygame.image.load("data/images/background.png").convert()
+            """
+            We compute the brightness value of the background image by calculating the root mean square (RMS) of all
+            pixel color values. Our aim is to darken the image for minimal gameplay impact.
+            
+            1. We first convert the image to a numpy array, compute the mean pixel value across RGB channels for every
+            pixel, then take the root mean square of those values
+            
+            If the computed brightness is greater than the target brightness, we darken the background image:
+
+            2. Calculate the darken factor by dividing the target brightness by the computed brightness.
+            3. Create a dark surface with the same size as the background image and fill it with a darkened pixel value.
+            4. Blend the dark surface with the original background image.
+            """
+            background_array = pygame.surfarray.array3d(background)  # convert to numpy array
+            pixel_mean_rgb_values = np.mean(background_array, axis=2)  # compute mean pixel brightness over rgb channels
+            brightness = np.sqrt(np.mean(pixel_mean_rgb_values ** 2))  # compute rms pixel brightness
+            brightness_target = 40
+            # darken the background image
+            if brightness > brightness_target:
+                darken_factor = brightness_target / brightness
+                pixel_value = int(255 * darken_factor)
+                # Create a surface with the same size as the background image
+                dark_surface = pygame.Surface(background.get_size()).convert_alpha()
+                dark_surface.fill((pixel_value, pixel_value, pixel_value))
+                background.blit(dark_surface, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
+            # Scale the background image to game screen size
             self.background = pygame.transform.smoothscale(background, (self.screen_width, self.screen_height))
 
+        # Check for the existence of extracted and process musical data
         if os.path.exists(onset_times_file) and os.path.exists(onset_durations_file) and os.path.exists(
                 onset_bars_file) and os.path.exists(tempo_file):
             onset_times = np.load(onset_times_file)
@@ -227,6 +283,8 @@ class GameScene:
             self.music_data = notedetection.process_audio(self.audio_file_full_path, tempo=given_tempo)
             onset_times, onset_durations, onset_bars, tempo = self.music_data
             tempo = np.array([tempo])
+
+        # Load music from downloaded audio file
         mixer.music.load(self.audio_file_full_path)
         mixer.music.set_volume(0.8)
 
@@ -266,8 +324,12 @@ class GameScene:
                 self.debug_colors[onset_time + t] = (color, color, color)
         self.click_sound_effect = mixer.Sound('data/audio/sound_effects/click.wav')
 
-    def run(self, seed=None):
-        if self.paused:
+    def run(self):
+        """
+        Control flow of the main gameplay loop
+        :return: Next state of the game
+        """
+        if self.paused:  # This handles the case where the game was resumed from a paused state
             pygame.mixer.music.unpause()
             self.paused = False
         while True:
@@ -278,74 +340,100 @@ class GameScene:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         self.paused = True
-            if not self.paused:
-                self.step()
-                if not self.game_started and self.clock.get_fps() > 1:
-                    mixer.music.play()  # Start music playback
-                    self.game_started = True
-                if self.game_started and (not mixer.music.get_busy()):
-                    return "End"  # Stop the game loop when music finishes playing
-                self.render()
-            else:
-                pygame.mixer.music.pause()
-                return "Pause"
+                        pygame.mixer.music.pause()
+                        return "Pause"
 
-    def restart(self, seed=None, options=None):
+            # Do not start playing the music or run game logic until fps stabilizes after initialization
+            if not self.game_started and self.clock.get_fps() > 1:
+                mixer.music.play()  # Start music playback
+                self.game_started = True
+
+            # Stop the game loop when music finishes playing
+            if self.game_started and (not mixer.music.get_busy()):
+                return "End"
+
+            self.step()
+            self.render()
+
+    # Unused
+    def restart(self, seed=None):
         random.seed(seed)
         return
 
-    def step(self, action=None):
+    def step(self):
+        """
+        Main control function for game play
+        """
         if self.game_started:
             self.input_manager.update()
             self.steps += 1
             score = self.data.score
+
+            # Obtain the score at this step and update the status of patterns
             temp_score = self.pattern_manager.update_patterns(self.steps, self.input_manager)
             score += temp_score
+
+            # Ignore points gained from sliders
             if temp_score >= 10:
-                combo = self.data.combo
-                combo += 1
-                self.data.combo = combo
-                perfect_count = self.data.perfect_count
-                perfect_count += 1
-                self.data.perfect_count = perfect_count
-                # print(f"Perfect Count: {perfect_count}")
+                self.data.combo += 1
+                self.data.perfect_count += 1
                 self.tap_sound_effect.play()
             self.data.score = score
 
     def render(self):
+        """
+        Render all game elements based on current step in the game.
+        We first obtain the real fps from the pygame Clock object method, which is typically a little bit lower
+        than the fps set due to lag and overhead.
+        We add the real_time_steps variable by the set fps (60) by the actual fps.
+        So, the real_time_steps variable will be higher than the game steps when there is lag.
+        We call the sync_game_and_music method to align the steps variable to the real_time_steps.
+        """
         fps = self.clock.get_fps()
         # print("Actual FPS:", fps)
-        if fps and self.game_started:
+        if fps and self.game_started:  # avoid division by zero errors
             self.real_time_steps += self.fps / fps
 
         self.sync_game_and_music()
+
         win = pygame.Surface((self.screen_width, self.screen_height))
-        self.window_buffer = pygame.Surface((self.screen_width, self.screen_height))
-        # win.blit(self.background, (0, 0))
-        win.fill((0, 0, 0))  # Fill the surface with black color
+        if use_game_background:
+            win.blit(self.background, (0, 0))  # Use loaded game background
+        else:
+            win.fill((0, 0, 0))  # Fill the surface with black color
         self.window_buffer.fill((0, 0, 0))
+
         if self.mode == "debug":
             rect = pygame.Rect(0, 0, 100, 100)  # Create a rectangle for the top left corner
             if self.steps < self.debug_maximum_t:
                 pygame.draw.rect(win, self.debug_colors[self.steps], rect)  # Fill the rectangle according to the onsets
             if self.steps in self.onset_time_frames:
                 self.click_sound_effect.play()
+
         # rendering objects
         isMissed = not self.pattern_manager.render_patterns(win, self.steps)
+        # Check misses by seeing when patterns expire (go past their rendering lifetime) and have not been clicked
         if isMissed:
             self.data.highest_combo = max(self.data.combo, self.data.highest_combo)
             self.data.combo = 0
             miss_count = self.data.miss_count
             miss_count += 1
             self.data.miss_count = miss_count
+
+        """
+        Save the window on the buffer before displaying the cursor on the screen,
+        to save the screen if pause game 
+        """
         self.window_buffer.blit(win, (0, 0))
+
+        # Display the cursor image on the screen
         cursor_img, cursor_img_rect, cursor_pressed_img, cursor_pressed_img_rect = self.cursor_images
         if self.input_manager.is_user_holding:
             cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
             win.blit(cursor_pressed_img, cursor_pressed_img_rect)  # draw the cursor
         else:
-            cursor_img_rect.center = pygame.mouse.get_pos()  # update position
-            win.blit(cursor_img, cursor_img_rect)  # draw the cursor
+            cursor_img_rect.center = pygame.mouse.get_pos()
+            win.blit(cursor_img, cursor_img_rect)
 
         # print cumulative score and combo
         self.score_text = "Score: {}".format(self.data.score)
@@ -366,16 +454,17 @@ class GameScene:
         self.clock.tick(self.fps)
 
     def sync_game_and_music(self):
-        # sync up game steps and music
+        # sync up game steps and music if real_time_steps and steps deviate by more than 1 step
         if self.game_started and abs(self.real_time_steps - self.steps) > 1.1:
             if 0 <= (self.real_time_steps - self.steps) <= 3:
                 self.steps += 1  # try to speed up the game step to keep up
             elif 0 <= (self.steps - self.real_time_steps) <= 3:
                 self.steps -= 1  # slow down the game steps to follow the music
             else:
+                # Force audio to readjust to game time if too much deviation
                 elapsed_time = self.steps / self.fps
                 mixer.music.set_pos(elapsed_time)
-                self.real_time_steps = self.steps
+                self.real_time_steps = self.steps  # realign real_time_steps to the game steps
 
     def close(self):
         if self.window is not None:
@@ -388,43 +477,52 @@ class PauseScene:
         self.resume_selected = False
         self.window = window
         self.screen_width, self.screen_height = window.get_size()
-        self.paused_screen = None
+        self.paused_screen = None  # Stores the last screen displayed in the game
         self.input_manager = InputManager()
         self.clock = pygame.time.Clock()
 
         self.cursor_images = cursor_images
 
-    def run(self, seed=None):
+    def run(self):
         self.resume_selected = False
         while not self.resume_selected:
             self.input_manager.update()
             self.render()
+
+            # Handle events
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     return "End"
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         self.resume_selected = True
+
             if self.resume_selected:
                 self.countdown()
                 return "Resume"
 
     def render(self):
         win = pygame.Surface((self.screen_width, self.screen_height))
-        win.blit(self.paused_screen, (0, 0))
+        win.blit(self.paused_screen, (0, 0))  # Display the last screen displayed in game scene
         self._apply_whiteness(win)
+
+        # Display cursor image
         cursor_img, cursor_img_rect, cursor_pressed_img, cursor_pressed_img_rect = self.cursor_images
         if self.input_manager.is_mouse_holding:
             cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
             win.blit(cursor_pressed_img, cursor_pressed_img_rect)  # draw the cursor
         else:
-            cursor_img_rect.center = pygame.mouse.get_pos()  # update position
-            win.blit(cursor_img, cursor_img_rect)  # draw the cursor
+            cursor_img_rect.center = pygame.mouse.get_pos()
+            win.blit(cursor_img, cursor_img_rect)
+
         self.window.blit(win, win.get_rect())
         pygame.event.pump()
         pygame.display.update()
 
     def countdown(self):
+        """
+        Handles the resume countdown
+        """
         font = pygame.font.Font(None, 150)  # Font for the countdown numbers
         countdown_time = 3
         fps = 60
@@ -439,8 +537,9 @@ class PauseScene:
                 cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
                 win.blit(cursor_pressed_img, cursor_pressed_img_rect)  # draw the cursor
             else:
-                cursor_img_rect.center = pygame.mouse.get_pos()  # update position
-                win.blit(cursor_img, cursor_img_rect)  # draw the cursor
+                cursor_img_rect.center = pygame.mouse.get_pos()
+                win.blit(cursor_img, cursor_img_rect)
+
             self.window.blit(win, win.get_rect())
             pygame.event.pump()
             pygame.display.update()
@@ -484,6 +583,7 @@ class MenuScene:
         self.button_color = (0, 0, 0)
         self.button_font = pygame.font.Font(None, 60)
         self.button_text_color = (255, 255, 255)  # White color
+        self.button_selected_text_color = (245, 255, 120)  # Light Yellow color
 
         # Calculate total width for buttons and margins
         self.total_width = (self.button_width + self.button_margin) * 10 - self.button_margin
@@ -499,7 +599,7 @@ class MenuScene:
         self.approach_rate_label_pos_y = (self.screen_height - self.label_font.size(self.approach_rate_label_text)[
             1]) // 3 * 2 - 50
 
-    def run(self, seed=None):
+    def run(self):
         while not self.start_click:
             self.input_manager.update()
             self.render()
@@ -511,6 +611,7 @@ class MenuScene:
 
     def render(self):
         pygame.mouse.set_visible(False)  # hides the cursor and will draw a cursor for playing rhythm game
+
         win = pygame.Surface((self.screen_width, self.screen_height))
         win.fill((0, 0, 0))
 
@@ -535,7 +636,10 @@ class MenuScene:
                     self.data.difficulty = i + 1
 
             button_text = str(i + 1)  # Button label from 1 to 10
-            button_text_surface = self.button_font.render(button_text, True, self.button_text_color)
+            if i + 1 == self.data.difficulty:
+                button_text_surface = self.button_font.render(button_text, True, self.button_selected_text_color)
+            else:
+                button_text_surface = self.button_font.render(button_text, True, self.button_text_color)
             button_text_rect = button_text_surface.get_rect(center=button_rect.center)
             win.blit(button_text_surface, button_text_rect)
 
@@ -556,7 +660,10 @@ class MenuScene:
                     self.data.approach_rate = i + 1
 
             button_text = str(i + 1)  # Button label from 1 to 10
-            button_text_surface = self.button_font.render(button_text, True, self.button_text_color)
+            if i + 1 == self.data.approach_rate:
+                button_text_surface = self.button_font.render(button_text, True, self.button_selected_text_color)
+            else:
+                button_text_surface = self.button_font.render(button_text, True, self.button_text_color)
             button_text_rect = button_text_surface.get_rect(center=button_rect.center)
             win.blit(button_text_surface, button_text_rect)
 
@@ -574,8 +681,8 @@ class MenuScene:
             cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
             win.blit(cursor_pressed_img, cursor_pressed_img_rect)  # draw the cursor
         else:
-            cursor_img_rect.center = pygame.mouse.get_pos()  # update position
-            win.blit(cursor_img, cursor_img_rect)  # draw the cursor
+            cursor_img_rect.center = pygame.mouse.get_pos()
+            win.blit(cursor_img, cursor_img_rect)
 
         self.window.blit(win, win.get_rect())
         pygame.event.pump()
@@ -606,7 +713,7 @@ class EndScene:
         self.label_font = pygame.font.Font(None, 72)
         self.label_color = (255, 255, 255)  # White color
 
-    def run(self, seed=None):
+    def run(self):
         while not self.end_click:
             self.input_manager.update()
             self.render()
@@ -683,8 +790,8 @@ class EndScene:
             cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
             win.blit(cursor_pressed_img, cursor_pressed_img_rect)  # draw the cursor
         else:
-            cursor_img_rect.center = pygame.mouse.get_pos()  # update position
-            win.blit(cursor_img, cursor_img_rect)  # draw the cursor
+            cursor_img_rect.center = pygame.mouse.get_pos()
+            win.blit(cursor_img, cursor_img_rect)
 
         self.window.blit(win, win.get_rect())
         pygame.event.pump()
@@ -693,7 +800,6 @@ class EndScene:
 
 class LoadingScene:
     def __init__(self, window, task, cursor_images):
-        self.end_click = False
         self.window = window
         self.screen_width, self.screen_height = window.get_size()
         self.input_manager = InputManager()
@@ -707,7 +813,7 @@ class LoadingScene:
         self.task()
         self.task_done.set()
 
-    def run(self, seed=None):
+    def run(self):
         threading.Thread(target=self.run_task, daemon=True).start()
         while not self.task_done.is_set():
             self.input_manager.update()
@@ -735,8 +841,8 @@ class LoadingScene:
             cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
             win.blit(cursor_pressed_img, cursor_pressed_img_rect)  # draw the cursor
         else:
-            cursor_img_rect.center = pygame.mouse.get_pos()  # update position
-            win.blit(cursor_img, cursor_img_rect)  # draw the cursor
+            cursor_img_rect.center = pygame.mouse.get_pos()
+            win.blit(cursor_img, cursor_img_rect)
 
         self.window.blit(win, win.get_rect())
         pygame.event.pump()
