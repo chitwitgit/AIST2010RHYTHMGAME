@@ -1,12 +1,14 @@
 import random
 
-import pygame
-
 from utils.patterns import *
 from itertools import groupby
 
 
 class PatternManager:
+    """
+    Pattern manager class generates patterns from musical data to form a map, keeps track of the list of patterns,
+    and contains methods to easily operate on these patterns, like prerender, render and update.
+    """
     def __init__(self, screen_width, screen_height, fps, seed, difficulty, approach_rate, tempo):
         self.screen_width = screen_width
         self.screen_height = screen_height
@@ -40,12 +42,10 @@ class PatternManager:
         # print(onset_time_frames)
         # print(onset_duration_frames)
         # print(onset_bars)
-        # self.generate_random_patterns(100)
         self.generate_patterns(onset_time_frames, onset_duration_frames, onset_bars)
         self.pattern_queue = self.patterns[:self.queue_length]
         return
 
-    # This is NOT a primitive approach
     def generate_patterns(self, onset_time_frames, onset_duration_frames, onset_bars):
         # make the seed dependent on the input audio in some way
         seed_add = sum(onset_duration_frames)
@@ -214,6 +214,12 @@ class PatternManager:
             pattern.prerender(win)
 
     def update_patterns(self, t, input_manager):
+        """
+        Updates the state of all patterns in the queue, and calculates the score earned from the patterns at frame t
+        :param t: Time (in frames)
+        :param input_manager: Input manager defined in game/utils/input_manager.py
+        :return: Score earned at this frame
+        """
         score_earned = 0
         for pattern in self.pattern_queue:
             temp_score, clicked = pattern.update(t, input_manager)
@@ -223,22 +229,41 @@ class PatternManager:
         return score_earned
 
     def render_patterns(self, win, t):
+        """
+        Renders the patterns in the queue. If a pattern in the queue has past its lifetime, we delete it from the queue
+        and load another one from the pattern list
+        If a pattern "died", we check if it has been clicked and has a positive score, this is to return it to the
+        main program to check for misses.
+        :param win: Pygame surface to render on
+        :param t: Time (in frames)
+        :return: If no patterns have been missed (not clicked and zero marks)
+        """
         flag = True
         for pattern in self.pattern_queue:
-            if pattern.render(win, t):  # past its lifetime
+            isPastLifetime = pattern.render(win, t)
+            if isPastLifetime:
+                # Check if the pattern was missed
                 pattern = self.pattern_queue[0]
                 isHit = pattern.pressed
+                flag = isHit and pattern.score > 0
+
+                # Update queue and pattern list
                 self.patterns = self.patterns[1:]
                 self.pattern_queue = self.pattern_queue[1:]
-                if self.queue_length < len(self.patterns):
+                if self.queue_length < len(self.patterns):  # If not, all patterns have already been loaded to the queue
                     self.pattern_queue.append(self.patterns[self.queue_length])
-                flag = isHit and pattern.score > 0
         return flag
 
     def hot_load_caches(self):
+        """
+        Simulates rendering patterns, drawing approach circles, clicked circles and tracing circles
+        across a period of time to hot load the cache so there are no cold misses at the beginning of the game
+        which may lead to performance halts
+        """
         surf = pygame.Surface((self.screen_width, self.screen_height))
         example_t = self.lifetime * 3  # at the middle
         for t in range(example_t * 2):
+            # Simulate drawing patterns
             # Calculate the transparency based on the t value and lifetime
             time_difference = t - example_t
             interpolation_factor = min(abs(time_difference) / (self.lifetime / 2), 1)
@@ -249,10 +274,21 @@ class PatternManager:
                 continue
             if alpha < 255:
                 apply_alpha(surf, alpha)
+
+            # Draw other visual elements
             relative_time_difference = time_difference / self.lifetime
+
             draw_approach_circle(surf, (self.screen_width // 2, self.screen_height // 2),
                                  relative_time_difference, self.radius + self.stroke_width,
                                  self.stroke_width, self.approach_rate)
             draw_clicked_circle(surf, (self.screen_width // 2, self.screen_height // 2),
                                 relative_time_difference, self.radius + self.stroke_width,
                                 self.stroke_width)
+
+        # Tracing circle
+        center_color = (0, 0, 0, 0)
+        center_color_hollow = (255, 255, 255, 150)
+        circle_surface((255, 255, 255, 255), center_color,
+                       self.radius + self.stroke_width, self.stroke_width, 1)
+        circle_surface((255, 255, 255, 255), center_color_hollow,
+                       self.radius + self.stroke_width, self.stroke_width, 1)

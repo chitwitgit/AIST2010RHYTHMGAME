@@ -2,19 +2,26 @@ import pygame
 
 
 class InputManager:
+    """
+    Input manager class keeps tracks of user inputs and their previous states.
+    """
     def __init__(self):
         self.mouse_state = pygame.mouse.get_pressed()
         self.prev_mouse_state = self.mouse_state
+
         self.mouse_pos = pygame.mouse.get_pos()
         self.prev_mouse_pos = self.mouse_pos
+
         self.keys = pygame.key.get_pressed()
         self.prev_keys = self.keys
 
     def update(self):
         self.prev_mouse_state = self.mouse_state
         self.mouse_state = pygame.mouse.get_pressed()
+
         self.prev_mouse_pos = self.mouse_pos
         self.mouse_pos = pygame.mouse.get_pos()
+
         self.prev_keys = self.keys
         self.keys = pygame.key.get_pressed()
 

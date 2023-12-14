@@ -1,12 +1,14 @@
-# Project Name
+# Rhythm Game with Automatic Map Generation
 
 ## Description
-A brief description of the project.
+A Pygame app created for AIST2010 course project. It is a rhythm game which can take in any piece of music via a
+downloaded music file or a youtube link, and generate a map for the music according to its musical data. The rhythm game
+has similar gameplay as the popular rhythm game osu!
 
 ## Table of Contents
 
 1. [Description](#description)
-2. [Usage](#usage)
+2. [Installation](#installation)
    - [Cloning the Repository](#cloning-the-repository)
    - [Setting up the Python Environment](#setting-up-the-python-environment)
      - [Step 1: Create a Python Environment](#step-1-create-a-python-environment)
@@ -18,7 +20,7 @@ A brief description of the project.
 3. [Repository Section Description](#repository-section-description)
 
 
-# Usage
+# Installation
 To use and interact with the project, follow the guidelines below.
 
 ## Cloning the Repository
