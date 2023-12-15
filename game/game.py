@@ -12,7 +12,7 @@ from utils.settings import settings
 from dataclasses import dataclass
 import threading
 
-youtube_link, given_tempo, difficulty, approach_rate, mode, is_use_new_files, use_game_background = settings
+youtube_link, seed, given_tempo, difficulty, approach_rate, mode, is_use_new_files, use_game_background = settings
 
 
 # A dataclass storing some variables about the game
@@ -154,7 +154,7 @@ class GameScene:
         self.real_time_steps = 0
 
         self.fps = 60
-        self.seed = 777
+        self.seed = seed
 
         self.color = (255, 255, 255)
         self.font = pygame.font.Font(None, 64)
