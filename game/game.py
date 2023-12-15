@@ -654,13 +654,11 @@ class MenuScene:
                                        self.button_hover_color, self.button_selected_text_color)
             if difficulty_button.is_clicked(self.input_manager):
                 self.data.difficulty = i + 1
-                self.flag = [False] * 10
-                self.flag[i] = True
 
-            if not self.flag[i]:
-                difficulty_button.deselect()
-            else:
+            if i + 1 == self.data.difficulty:
                 difficulty_button.select()
+            else:
+                difficulty_button.deselect()
 
             difficulty_button.render(win)
 
