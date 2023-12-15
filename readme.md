@@ -23,25 +23,12 @@ has similar gameplay as the popular rhythm game osu!
 # Installation
 To use and interact with the project, follow the guidelines below.
 
-## Cloning the Repository
-1. Start by cloning the project repository from GitHub. Open a terminal or command prompt and navigate to the directory where you want to clone the repository.
-   ```bash
-   git clone <repository_url>
-   ```
-
-Replace `<repository_url>` with the URL of the project repository. You can find the repository URL on the GitHub page of the project.
-
-2. Once the repository is cloned, navigate into the project directory:
-   ```bash
-   cd <project_directory>
-   ```
-Replace `<project_directory>` with the name of the directory created during the cloning process.
-
 ## Setting up the Python Environment
-We will be using Python 3.11 for this project. To set up the project environment, you'll need to create a Python environment and then install the required packages using either `conda` or `pip`.
+The project requires Python 3.11. To set up the project environment, you'll need to create a Python 
+virtual environment and install the required packages using `pip`.
 
-### Step 1: Create a Python Environment
-Start by creating a new Python environment. You have two options: `conda` or `python` (virtualenv).
+### Step 1: Create a Python Virtual Environment
+Start by creating a new Python virtual environment. You have two options: `conda` or `python` (virtualenv).
 
 #### Using conda
 If you have Anaconda or Miniconda installed, follow these steps:
@@ -57,7 +44,7 @@ If you have Anaconda or Miniconda installed, follow these steps:
 #### Using python (virtualenv)
 If you prefer using `python` and `virtualenv`, follow these steps:
 
-1. Create a new virtual environment (optional but recommended):
+1. Create a new virtual environment :
    ````bash
    python3 -m venv rhythmgame
 
@@ -70,71 +57,67 @@ If you prefer using `python` and `virtualenv`, follow these steps:
      ````bash
      .\rhythmgame\Scripts\activate
 
-After this step, you will have created a Python virtual environment named "rhythmgame," which will contain all the necessary dependencies and packages required to run the project smoothly.
+After this step, you will have created a Python virtual environment named "rhythmgame," 
+which will contain all the necessary dependencies and packages required to run the project smoothly.
 
 ### Step 2: Install the Required Packages
-After creating the Python environment, you can choose to install the required packages using either `conda` or `pip`.
+After creating the Python environment, you can install the required packages using pip.
+Make sure you are in the project directory before running this command.
 
-To install packages using `conda`, run the following command:
-```bash
-conda install --file requirements_conda.txt
-```
 To install packages using `pip`, run the following command:
 ```bash
-pip install -r requirements_pip.txt
+pip install -r requirements.txt
 ```
-These commands will install all the required packages into your Python environment.
+This command will install all the required packages into your Python environment.
 
-### Running the Project
-Once the environment is set up, you can run the project, edit the files, and submit changes.
+### Step 3: Install FFmpeg
+FFmpeg is a powerful multimedia framework used in the project to convert mp4 files to mp3 files. Follow the instructions below to install FFmpeg on your system:
 
-### Submitting Changes
-1. If you have made any changes to the dependencies, follow these steps to update the requirements files and submit your changes:
+#### Windows
+1. Visit the FFmpeg website and navigate to the "Download" section.
+2. Download the FFmpeg binaries for Windows from the provided links.
+3. Extract the downloaded ZIP file and add the FFmpeg executable path to your system's environment variables.
+4. To verify the installation, open a command prompt and enter `ffmpeg`. You should see the FFmpeg version and command line options printed to the console.
 
-    - Activate the project environment using the appropriate command. <br><br>
+#### macOS
+FFmpeg can be installed using Homebrew. Open a terminal and run the following command to install FFmpeg:
 
-    - If you added new dependencies, update the respective requirements file:
-    
-        - If using `conda`, run:
-        ```bash
-        conda list --export > requirements_conda.txt
-        ```
+```bash
+brew install ffmpeg
+```
 
-        - If using `pip`, run:
-        ```bash
-        pip freeze > requirements_pip.txt
-        ```
+To verify the installation, enter `ffmpeg` in the terminal. You should see the FFmpeg version and command line options printed to the console.
 
+#### Linux (Ubuntu)
+1. Open a terminal.
+2. Update the package list:
+   ````shell
+   sudo apt update
+3. Install FFmpeg with the following command:
+   ````shell
+   sudo apt install ffmpeg
+4. To verify the installation, enter `ffmpeg` in the terminal. You should see the FFmpeg version and command line options printed to the console.
 
-3. Commit your changes to the repository and push them to your forked repository.
-   - Use the `git status` command to check the modified files.
-   - Add the modified files to the staging area:
-     ```bash
-     git add file1 file2 ...
-     ```
-     Replace `file1 file2 ...` with the names of the modified files or use `git add .` to add all modified files.
-   - Commit your changes with a descriptive commit message:
-     ```bash
-     git commit -m "Your commit message"
-     ```
+# Running the Project
+Once everything has been set up, you can run the project using an IDE like PyCharm or Visual Studio, or through the command line.
 
-4. Push the Changes and Create a Pull Request:
-   - Push your changes to the main branch of the project repository:
-     ```bash
-     git push origin main
-     ```
-   - Visit the project repository on GitHub.
-   - You should see a notification banner indicating that you pushed changes to the main branch.
-   - Click on the "Compare & pull request" button.
-   - Provide a descriptive title and additional comments explaining the changes you made.
-   - Review the changes in the pull request and ensure everything looks correct.
-   - Click on the "Create pull request" button to submit the pull request directly to the main branch.
+1. Navigate to the project folder
+```commandline
+cd C:\path\to\project
+```
 
+2. Run the main program
+```commandline
+python main.py
+```
+
+3. You can also specify some command line arguments to run the program. 
+The command below outputs the help menu for you to learn more about the available command line arguments.
+```commandline
+python main.py -h
+```
 
 ## Repository Section Description
-
-### Docs
-The `docs` section contains the project documentation. 
 
 ### Game
 The `game` section contains the source code and assets for the game. It includes game scripts, images, audio files, or any other resources specific to the game development.
@@ -142,17 +125,11 @@ The `game` section contains the source code and assets for the game. It includes
 - ### Data
   This section contains the assets used in the game. It includes fonts, image files, audio files, or any other relevant data resources.
 
-### Utils
-The `utils` section contains utility scripts or modules that provide helper functions or tools for the project.
-
-### Tests
-The `tests` section contains the test cases and test scripts for the project.
+- ### Utils
+    The `utils` section contains utility scripts or modules that provide helper functions or tools for the game and the.
 
 ### main.py
-The `main.py` file is the entry point of the project. It contains the main code that executes when the project is run. The main program would drive the whole pipeline of the app.
+The `main.py` file is the entry point of the project. It contains the main code that executes when the project is run. The main program drives the whole pipeline of the app.
 
-### requirements_conda.txt
-The `requirements_conda.txt` file specifies the Conda packages and dependencies required to run the project. It includes a list of packages and their versions.
-
-### requirements_pip.txt
-The `requirements_pip.txt` file specifies the Python packages and dependencies required to run the project. It includes a list of packages and their versions.
+### requirements.txt
+The `requirements.txt` file specifies the Python packages and dependencies required to run the project. It includes a list of packages and their versions.
