@@ -539,7 +539,7 @@ class PauseScene:
         quit_button = Button(font, "QUIT", text_color, hover_color, selected_text_color, (self.screen_width - 25, 650), "bottomright")
         quit_button.render(win)
 
-        if quit_button.is_clicked(self.input_manager):
+        if quit_button.is_clicked:
             self.quit_click = True
             quit_button.select()
 
@@ -547,7 +547,7 @@ class PauseScene:
         menu_button = Button(font, "MENU", text_color, hover_color, selected_text_color, (25, 650), "bottomleft")
         menu_button.render(win)
 
-        if menu_button.is_clicked(self.input_manager):
+        if menu_button.is_clicked:
             self.menu_click = True
             menu_button.select()
 
@@ -555,7 +555,7 @@ class PauseScene:
         resume_button = Button(font, "RESUME", text_color, hover_color, selected_text_color, (self.screen_width // 2, 250), "center")
         resume_button.render(win)
 
-        if resume_button.is_clicked(self.input_manager):
+        if resume_button.is_clicked:
             self.resume_selected = True
             resume_button.select()
 
@@ -563,7 +563,7 @@ class PauseScene:
         restart_button = Button(font, "RESTART", text_color, hover_color, selected_text_color, (self.screen_width // 2, 400), "center")
         restart_button.render(win)
 
-        if restart_button.is_clicked(self.input_manager):
+        if restart_button.is_clicked:
             self.restart_click = True
             restart_button.select()
 
@@ -690,7 +690,7 @@ class MenuScene:
             button_text = str(i + 1)
             difficulty_button = Button(self.button_font, button_text, self.button_text_color,
                                        self.button_hover_color, self.button_selected_text_color, (button_pos_x, self.difficulty_button_pos_y), "center")
-            if difficulty_button.is_clicked(self.input_manager):
+            if difficulty_button.is_clicked:
                 self.data.difficulty = i + 1
 
             if i + 1 == self.data.difficulty:
@@ -712,7 +712,7 @@ class MenuScene:
             approach_rate_button = Button(self.button_font, button_text, self.button_text_color,
                                        self.button_hover_color, self.button_selected_text_color,
                                        (button_pos_x, self.approach_rate_button_pos_y), "center")
-            if approach_rate_button.is_clicked(self.input_manager):
+            if approach_rate_button.is_clicked:
                 self.data.approach_rate = i + 1
 
             if self.data.approach_rate != (i + 1):
@@ -729,7 +729,7 @@ class MenuScene:
 
         start_button.render(win)
 
-        if start_button.is_clicked(self.input_manager):
+        if start_button.is_clicked:
             self.start_click = True
             start_button.select()
 
@@ -839,7 +839,7 @@ class EndScene:
 
         end_button.render(win)
 
-        if end_button.is_clicked(self.input_manager):
+        if end_button.is_clicked:
             self.end_click = True
             end_button.select()
 
@@ -850,7 +850,7 @@ class EndScene:
 
         menu_button.render(win)
 
-        if menu_button.is_clicked(self.input_manager):
+        if menu_button.is_clicked:
             self.menu_click = True
             menu_button.select()
 
@@ -974,7 +974,7 @@ class ReadyScene:
 
         play_button.render(win)
 
-        if play_button.is_clicked(self.input_manager):
+        if play_button.is_clicked:
             self.play_selected = True
             play_button.select()
 
