@@ -6,6 +6,14 @@ from scipy.special import rel_entr
 
 
 def merge_close_onset(onset_times, onset_durations, tempo, precision=0.125):
+    '''
+    Merge very closely located onsets
+    :param onset_times: start time of onset
+    :param onset_durations: duration of onset
+    :param tempo: tempo of song
+    :param precision: decision boundary for judging close onsets
+    :return: merged onset times and durations
+    '''
     spb = 60 / tempo * precision
     i = 0
     length = len(onset_times)
@@ -22,6 +30,14 @@ def merge_close_onset(onset_times, onset_durations, tempo, precision=0.125):
 
 
 def remove_noisy_onset(onset_times, onset_durations, x, sr):
+    '''
+    Filter out noise in onsets
+    :param onset_times: onset start time
+    :param onset_durations: onset durations
+    :param x: audio input
+    :param sr: sampling rate
+    :return: filtered onset times and durations
+    '''
     onset_index = librosa.time_to_samples(onset_times, sr=sr)
     onset_index_range = onset_index.reshape(-1, 1) + np.arange(0, 200)
     onset_sample_range = x[onset_index_range]
@@ -38,6 +54,16 @@ def remove_noisy_onset(onset_times, onset_durations, x, sr):
 
 def merge_vocal_background_with_padding(vocal_onset, vocal_duration, background_onset, background_duration, tempo,
                                         precision=1.0):
+    '''
+    Merge vocal and background onsets, add padding onsets as well
+    :param vocal_onset: vocal onsets
+    :param vocal_duration: vocal onset durations
+    :param background_onset:  background onset
+    :param background_duration: background onset durations
+    :param tempo: tempo of song
+    :param precision: precision for padding
+    :return: merged + padded onset times and durations, onset type label
+    '''
     spb = 60 / tempo * precision
     merge_onset = []
     merge_duration = []
@@ -88,39 +114,36 @@ def merge_vocal_background_with_padding(vocal_onset, vocal_duration, background_
 
 
 def vocal_separation(y, sr):
-    # And compute the spectrogram magnitude and phase
+    '''
+    Perform vocal separation on song
+    :param y: the audio input
+    :param sr: sampling rate
+    :return: filtered vocal audio, and background audio
+
+    ********************************************************************************
+    reference: https://librosa.org/doc/main/auto_examples/plot_vocal_separation.html
+    ********************************************************************************
+    '''
+    # compute the spectrogram magnitude and phase
     S_full, phase = librosa.magphase(librosa.stft(y))
 
-    # We'll compare frames using cosine similarity, and aggregate similar frames
-    # by taking their (per-frequency) median value.
-    #
-    # To avoid being biased by local continuity, we constrain similar frames to be
-    # separated by at least 2 seconds.
-    #
+    # use cosine similarity and aggregate similar frames by taking their (per-frequency) median value
     # This suppresses sparse/non-repetetitive deviations from the average spectrum,
     # and works well to discard vocal elements.
-
     S_filter = librosa.decompose.nn_filter(S_full,
                                            aggregate=np.median,
                                            metric='cosine',
                                            width=int(librosa.time_to_frames(2.0, sr=sr)))
 
-    # The output of the filter shouldn't be greater than the input
-    # if we assume signals are additive.  Taking the pointwise minimum
-    # with the input spectrum forces this.
+    # take the point-wise minimum with the input spectrum
     S_filter = np.minimum(S_full, S_filter)
 
-    # We can also use a margin to reduce bleed between the vocals and instrumentation masks.
-    # Note: the margins need not be equal for foreground and background separation
-    # adjust 1
+    # setup a margin to reduce bleed between the vocals and instrumentation masks.
     # noisy: 2, 10
     # clean: 10, 28
 
     margin_i, margin_v = 5, 20
     power = 2
-
-    filter_mean = np.max(S_filter)
-    unfilter_mean = np.max(S_full - S_filter)
 
     mask_i = librosa.util.softmask(S_filter,
                                    margin_i * (S_full - S_filter),
@@ -130,9 +153,7 @@ def vocal_separation(y, sr):
                                    margin_v * S_filter,
                                    power=power)
 
-    # Once we have the masks, simply multiply them with the input spectrum
-    # to separate the components
-
+    # multiply mask with the input spectrum to separate the components
     S_foreground = mask_v * S_full
     S_background = mask_i * S_full
 
@@ -143,11 +164,24 @@ def vocal_separation(y, sr):
 
 
 def load_audio(filename):
+    '''
+    load audio file
+    :param filename: file path to the audio
+    :return: audio signal, sampling rate
+    '''
     x, fs = librosa.load(filename)
     return x, fs
 
 
 def onset_roundings(onset_times, onset_durations, tempo, precision=0.125):
+    '''
+    Perform onset roundings with phase shift
+    :param onset_times: onset start time
+    :param onset_durations: onset durations
+    :param tempo: song tempo
+    :param precision: alignment precision
+    :return: aligned onset time and duration
+    '''
     spb = 60 / tempo * precision
     phase_shifts = np.linspace(0, spb, num=60)  # Generate a range of phase shifts
 
@@ -168,6 +202,16 @@ def onset_roundings(onset_times, onset_durations, tempo, precision=0.125):
 
 
 def onset_paddings(onset_times, onset_durations, tempo, abs_x, precisions=1.0, sr=22050):
+    '''
+    Perform padding between onsets
+    :param onset_times: onset start time
+    :param onset_durations: onset duration
+    :param tempo: song tempo
+    :param abs_x: absolute of audio signal
+    :param precisions: padding precision
+    :param sr: sampling rate
+    :return: padded onset time, duration
+    '''
     spb = 60 / tempo * precisions
     local_range = 100
     onset_samples = librosa.time_to_samples(onset_times, sr=sr)
@@ -203,6 +247,15 @@ def onset_paddings(onset_times, onset_durations, tempo, abs_x, precisions=1.0, s
 
 
 def onset_detection(x, fs, fft_length=1024, fft_hop_length=512, tempo=None):
+    '''
+    Main call of onset information retrieval
+    :param x: audio input signal
+    :param fs: sampling rate
+    :param fft_length: length for stft frame
+    :param fft_hop_length: hop size for stft frame
+    :param tempo: song tempo
+    :return: onset time, duration, bars (in which onsets are located), tempo
+    '''
     x_foreground, x_background = vocal_separation(copy.deepcopy(x), fs)
     onset_list = []
     duration_list = []
@@ -242,29 +295,30 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512, tempo=None):
     bar_duration = 60 / tempo * beats_per_bar
     onset_bars_list = [(i // bar_duration + 1) for i in onset_list]
     print('durations:', duration_list[0])
+
+    # merge background and vocal onsets (for future developement)
     # onset_times, onset_durations, onset_labels = merge_vocal_background_with_padding(onset_list[0], duration_list[0], onset_list[1], duration_list[1], tempo)
+
+    # only return vocal onset
     onset_times, onset_durations, onset_bars_list = onset_list[0], duration_list[0], onset_bars_list[0]
     return onset_times, onset_durations, onset_bars_list, tempo
 
 
-def onset_detection_back(x, fs, fft_length=1024, fft_hop_length=512, tempo=None):
-    y = abs(librosa.stft(x, n_fft=fft_length, hop_length=fft_hop_length, center=False))
-    onset_env = librosa.onset.onset_strength(y=x, sr=fs)
-    tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=fs)
-
-    onset_frames = librosa.onset.onset_detect(onset_envelope=onset_env, sr=fs)
-    # using onset_detect from librosa to detect onsets (using parameters delta=0.04, wait=4)
-    onset_times = librosa.frames_to_time(onset_frames, sr=fs)
-    onset_samples = librosa.frames_to_samples(onset_frames)
-    onset_durations = onset_length_detection(x, y, onset_samples, sr=fs)
-
-    onset_times, onset_durations = onset_roundings(onset_times, onset_durations, tempo)
-    onset_times, onset_durations = onset_paddings(onset_times, onset_durations, tempo, np.abs(x), sr=fs)
-    return onset_times, onset_durations, [], tempo
-
-
-# detect length of each onsets
-def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=512, sr=22050, tolerance=6):
+def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=512, sr=22050, tolerance=6, use_max_freq_peak=False, use_max_freq_amp=False, use_mean_square=False):
+    '''
+    Detect length of each onset
+    :param x: input audio signal
+    :param y: absolute of stft on x
+    :param onset_samples: onset start time
+    :param fft_length: stft frame length
+    :param fft_hop_length: stft frame hop size
+    :param sr: sampling rate
+    :param tolerance: tolerance for difference in binsize of frequency peak
+    :param use_max_freq_peak: using frequency peak as comparison metric (default: False)
+    :param use_max_freq_amp: using max frequency amplitude  as comparison metric (default: False)
+    :param use_mean_square: using mean square as comparision metric (default: False)
+    :return: onset durations
+    '''
     residual_size = fft_length - fft_hop_length
     filtered_onset_samples = onset_samples
     filtered_onset_samples[onset_samples < fft_length] = fft_length - residual_size
@@ -272,7 +326,7 @@ def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=
 
     onset_frame = y[:, onset_frame_indices]
     peaks = np.argmax(onset_frame, axis=0)
-    #     print('amplitude: ', np.max(onset_frame, axis=0))
+
     abs_x = np.abs(x)
     x_size = abs_x.shape
     tindex = np.arange(20) + onset_frame_indices[2]
@@ -303,11 +357,9 @@ def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=
     old_frame = onset_frame  # / np.sum(onset_frame)
     while valid_mask.sum() > 0:
         new_onset_frame = y[:, temp_indices]
-        # new_onset_frame /= np.sum(new_onset_frame)
         new_peaks = np.argmax(new_onset_frame, axis=0)
         new_amplitude = np.max(new_onset_frame, axis=0)
 
-        diff = np.mean((old_frame - new_onset_frame) ** 2, axis=0)
         diff = sum(rel_entr(old_frame, new_onset_frame))
 
         satisfaction = np.ones((onset_samples.shape[0]))
@@ -315,18 +367,18 @@ def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=
         # compute distribution difference
         satisfaction = np.logical_and(satisfaction, diff >= -2)
 
-        # check change in max frequency peak
-        # satisfaction = np.logical_and(satisfaction, np.abs(new_peaks - old_peaks) <= tolerance)
+        # compute mean square difference (default not in use)
+        if use_mean_square:
+            diff = np.mean((old_frame - new_onset_frame) ** 2, axis=0)
+            satisfaction = np.logical_and(satisfaction, diff < 1.0)
 
-        # use max frequency amplitude
-        # satisfaction = np.logical_and(satisfaction, new_amplitude >= old_amplitude / 2)
+        # check change in max frequency peak (default not in use)
+        if use_max_freq_peak:
+            satisfaction = np.logical_and(satisfaction, np.abs(new_peaks - old_peaks) <= tolerance)
 
-        # use fix overall amplitude
-        interval_samples = np.arange(-local_range, local_range).reshape(1, -1) + temp_onset_samples.reshape(-1, 1)
-        cur_amplitude = abs_x[interval_samples].reshape(-1, 2 * local_range)
-        cur_amplitude = np.max(cur_amplitude, axis=1)
-        mask2 = (standard_amplitude - cur_amplitude <= standard_amplitude * 0.8)
-        # satisfaction = np.logical_and(satisfaction, mask2)
+        # use max frequency amplitude (default not in use)
+        if use_max_freq_amp:
+            satisfaction = np.logical_and(satisfaction, new_amplitude >= old_amplitude / 2)
 
         valid_mask = np.logical_and(valid_mask, satisfaction)
         length_sum += valid_mask
@@ -342,8 +394,7 @@ def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=
         temp_onset_samples[~satisfaction] = 0
 
     durations = length_sum * residual_size / sr
-    # print('max durations:', np.max(durations))
-    # print('min durations:', np.min(durations))
+
     return durations
 
 
