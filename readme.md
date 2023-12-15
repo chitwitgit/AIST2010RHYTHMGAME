@@ -9,15 +9,14 @@ has similar gameplay as the popular rhythm game osu!
 
 1. [Description](#description)
 2. [Installation](#installation)
-   - [Cloning the Repository](#cloning-the-repository)
    - [Setting up the Python Environment](#setting-up-the-python-environment)
      - [Step 1: Create a Python Environment](#step-1-create-a-python-environment)
        - [Using conda](#using-conda)
        - [Using python (virtualenv)](#using-python-virtualenv)
      - [Step 2: Install the Required Packages](#step-2-install-the-required-packages)
-   - [Running the Project](#running-the-project)
-   - [Submitting Changes](#submitting-changes)
-3. [Repository Section Description](#repository-section-description)
+   - [Install FFmpeg](#step-3-install-ffmpeg)
+3. [Running the Project](#running-the-project)
+4. [Repository Section Description](#repository-section-description)
 
 
 # Installation
@@ -70,16 +69,16 @@ pip install -r requirements.txt
 ```
 This command will install all the required packages into your Python environment.
 
-### Step 3: Install FFmpeg
+## Install FFmpeg
 FFmpeg is a powerful multimedia framework used in the project to convert mp4 files to mp3 files. Follow the instructions below to install FFmpeg on your system:
 
-#### Windows
+### Windows
 1. Visit the FFmpeg website and navigate to the "Download" section.
 2. Download the FFmpeg binaries for Windows from the provided links.
 3. Extract the downloaded ZIP file and add the FFmpeg executable path to your system's environment variables.
 4. To verify the installation, open a command prompt and enter `ffmpeg`. You should see the FFmpeg version and command line options printed to the console.
 
-#### macOS
+### macOS
 FFmpeg can be installed using Homebrew. Open a terminal and run the following command to install FFmpeg:
 
 ```bash
@@ -88,7 +87,7 @@ brew install ffmpeg
 
 To verify the installation, enter `ffmpeg` in the terminal. You should see the FFmpeg version and command line options printed to the console.
 
-#### Linux (Ubuntu)
+### Linux (Ubuntu)
 1. Open a terminal.
 2. Update the package list:
    ````shell
@@ -133,3 +132,6 @@ The `main.py` file is the entry point of the project. It contains the main code 
 
 ### requirements.txt
 The `requirements.txt` file specifies the Python packages and dependencies required to run the project. It includes a list of packages and their versions.
+
+### runtime.txt
+Specifies the version of python the game is intended to be run in.
