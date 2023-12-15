@@ -848,11 +848,12 @@ class LoadingScene:
             win = pygame.Surface((self.screen_width, self.screen_height))
             win.fill((0, 0, 0))
 
-            if i//30 == 3:
+            fps = 30
+            if i//fps == 3:
                 i = 0
             else:
                 #Loading label
-                loading_label = Label(font, loading_text[i//30], text_color,
+                loading_label = Label(font, loading_text[i//fps], text_color,
                                       (self.screen_width // 2, self.screen_height // 2), "center")
                 loading_label.render(win)
 
