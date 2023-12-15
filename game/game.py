@@ -579,6 +579,8 @@ class MenuScene:
 
         self.cursor_images = cursor_images
 
+        self.flag = [False] * 10
+
         # Define label properties
         self.difficulty_label_text = "Difficulty:"
         self.approach_rate_label_text = "Approach Rate:"
@@ -593,6 +595,7 @@ class MenuScene:
         self.button_margin = 10
         self.button_color = (0, 0, 0)
         self.button_font = pygame.font.Font(None, 60)
+        self.button_hover_color = (255, 0, 0)
         self.button_text_color = (255, 255, 255)  # White color
         self.button_selected_text_color = (245, 255, 120)  # Light Yellow color
 
@@ -626,7 +629,8 @@ class MenuScene:
         win = pygame.Surface((self.screen_width, self.screen_height))
         win.fill((0, 0, 0))
 
-        # Menu button
+        # Menu label
+        #menu_label = Button(self.label_font, self.menu_label_text, self.label_color)
         label_surface = self.label_font.render(self.menu_label_text, True, self.label_color)
         label_rect = label_surface.get_rect(center=(self.screen_width // 2, 100))
         win.blit(label_surface, label_rect)
@@ -640,9 +644,25 @@ class MenuScene:
         for i in range(10):
             button_pos_x = self.start_x + (self.button_width + self.button_margin) * i
             button_rect = pygame.Rect(button_pos_x, self.difficulty_button_pos_y, self.button_width, self.button_height)
-            pygame.draw.rect(win, self.button_color, button_rect)
+            #pygame.draw.rect(win, self.button_color, button_rect)
 
-            if button_rect.collidepoint(pygame.mouse.get_pos()):
+            button_text = str(i + 1)
+            difficulty_button = Button(self.button_font, button_text, button_rect, self.button_text_color,
+                                       self.button_hover_color, self.button_selected_text_color)
+            if difficulty_button.is_clicked(self.input_manager):
+                self.data.difficulty = i + 1
+                self.flag = [False] * 10
+                self.flag[i] = True
+
+            if not self.flag[i]:
+                difficulty_button.deselect()
+            else:
+                difficulty_button.select()
+
+            difficulty_button.render(win)
+            print(self.data.difficulty)
+
+            """if button_rect.collidepoint(pygame.mouse.get_pos()):
                 if self.input_manager.is_mouse_clicked:  # Left mouse button pressed
                     self.data.difficulty = i + 1
 
@@ -652,7 +672,7 @@ class MenuScene:
             else:
                 button_text_surface = self.button_font.render(button_text, True, self.button_text_color)
             button_text_rect = button_text_surface.get_rect(center=button_rect.center)
-            win.blit(button_text_surface, button_text_rect)
+            win.blit(button_text_surface, button_text_rect)"""
 
         # Draw approach rate label
         label_surface = self.label_font.render(self.approach_rate_label_text, True, self.label_color)
