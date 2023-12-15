@@ -2,14 +2,18 @@ import pygame
 
 
 class Button:
-    def __init__(self, font, text, rect, color, hover_color, selected_color):
+    def __init__(self, font, text, color, hover_color, selected_color, coords, pos):
         self.font = font
+        self.text = text
         self.color = color
         self.hover_color = hover_color
         self.selected_color = selected_color
-        self.rect = rect
-        self.text = text
+        self.coords = coords
+        self.pos = pos
         self.selected = False
+
+        self.surface = self.font.render(self.text, True, color)
+        self.rect = self.surface.get_rect(center=self.coords)
 
     def set_text(self, text):
         self.text = text
@@ -28,8 +32,17 @@ class Button:
             color = self.color
 
         label_surface = self.font.render(self.text, True, color)
-        label_rect = label_surface.get_rect(center=self.rect.center)
-
+        if self.pos == "center":
+            label_rect = label_surface.get_rect(center=self.coords)
+        elif self.pos == "topleft":
+            label_rect = label_surface.get_rect(topleft=self.coords)
+        elif self.pos == "topright":
+            label_rect = label_surface.get_rect(topright=self.coords)
+        elif self.pos == "bottomleft":
+            label_rect = label_surface.get_rect(bottomleft=self.coords)
+        elif self.pos == "bottomright":
+            label_rect = label_surface.get_rect(bottomright=self.coords)
+        self.rect = label_rect
         surf.blit(label_surface, label_rect)
 
     def select(self):

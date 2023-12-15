@@ -540,9 +540,8 @@ class PauseScene:
         for i in range(countdown_time * fps):
             win = pygame.Surface((self.screen_width, self.screen_height))
             win.blit(self.paused_screen, (0, 0))
-            countdown_text = font.render(str(countdown_time - i // fps), True, (255, 255, 255))
-            countdown_text_rect = countdown_text.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
-            win.blit(countdown_text, countdown_text_rect)
+            countdown_label = Label(font, str(countdown_time - i // fps), (255, 255, 255), (self.screen_width // 2, self.screen_height // 2), "center")
+            countdown_label.render(win)
             cursor_img, cursor_img_rect, cursor_pressed_img, cursor_pressed_img_rect = self.cursor_images
             if self.input_manager.is_mouse_holding:
                 cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
@@ -579,8 +578,6 @@ class MenuScene:
 
         self.cursor_images = cursor_images
 
-        self.flag = [False] * 10
-
         # Define label properties
         self.difficulty_label_text = "Difficulty:"
         self.approach_rate_label_text = "Approach Rate:"
@@ -595,15 +592,15 @@ class MenuScene:
         self.button_margin = 10
         self.button_color = (0, 0, 0)
         self.button_font = pygame.font.Font(None, 60)
-        self.button_hover_color = (255, 0, 0)
+        self.button_hover_color = (128, 240, 255) # Neon Blue color
         self.button_text_color = (255, 255, 255)  # White color
         self.button_selected_text_color = (245, 255, 120)  # Light Yellow color
 
         # Calculate total width for buttons and margins
         self.total_width = (self.button_width + self.button_margin) * 10 - self.button_margin
         self.start_x = 450
-        self.difficulty_button_pos_y = (self.screen_height - self.button_height) // 3 + 50
-        self.approach_rate_button_pos_y = (self.screen_height - self.button_height) // 3 * 2 - 50
+        self.difficulty_button_pos_y = (self.screen_height - self.button_height) // 3 + 75
+        self.approach_rate_button_pos_y = (self.screen_height - self.button_height) // 3 * 2 - 20
 
         # Calculate label position
         self.difficulty_label_pos_x = self.start_x - self.label_font.size(self.difficulty_label_text)[0] - 20
@@ -632,26 +629,17 @@ class MenuScene:
         # Menu label
         menu_label = Label(self.label_font, self.menu_label_text, self.label_color, (self.screen_width // 2, 100), "center")
         menu_label.render(win)
-        """label_surface = self.label_font.render(self.menu_label_text, True, self.label_color)
-        label_rect = label_surface.get_rect(center=(self.screen_width // 2, 100))
-        win.blit(label_surface, label_rect)"""
 
         # Draw difficulty label
         difficulty_label = Label(self.label_font, self.difficulty_label_text, self.label_color, (self.difficulty_label_pos_x, self.difficulty_label_pos_y), "topleft")
         difficulty_label.render(win)
-        """label_surface = self.label_font.render(self.difficulty_label_text, True, self.label_color)
-        label_rect = label_surface.get_rect(topleft=(self.difficulty_label_pos_x, self.difficulty_label_pos_y))
-        win.blit(label_surface, label_rect)"""
 
         # Draw difficulty buttons
         for i in range(10):
-            button_pos_x = self.start_x + (self.button_width + self.button_margin) * i
-            button_rect = pygame.Rect(button_pos_x, self.difficulty_button_pos_y, self.button_width, self.button_height)
-            #pygame.draw.rect(win, self.button_color, button_rect)
-
+            button_pos_x = self.start_x + 20 + (self.button_width + self.button_margin) * i
             button_text = str(i + 1)
-            difficulty_button = Button(self.button_font, button_text, button_rect, self.button_text_color,
-                                       self.button_hover_color, self.button_selected_text_color)
+            difficulty_button = Button(self.button_font, button_text, self.button_text_color,
+                                       self.button_hover_color, self.button_selected_text_color, (button_pos_x, self.difficulty_button_pos_y), "center")
             if difficulty_button.is_clicked(self.input_manager):
                 self.data.difficulty = i + 1
 
@@ -662,53 +650,38 @@ class MenuScene:
 
             difficulty_button.render(win)
 
-            """if button_rect.collidepoint(pygame.mouse.get_pos()):
-                if self.input_manager.is_mouse_clicked:  # Left mouse button pressed
-                    self.data.difficulty = i + 1
-
-            button_text = str(i + 1)  # Button label from 1 to 10
-            if i + 1 == self.data.difficulty:
-                button_text_surface = self.button_font.render(button_text, True, self.button_selected_text_color)
-            else:
-                button_text_surface = self.button_font.render(button_text, True, self.button_text_color)
-            button_text_rect = button_text_surface.get_rect(center=button_rect.center)
-            win.blit(button_text_surface, button_text_rect)"""
-
         # Draw approach rate label
         approach_rate_label = Label(self.label_font, self.approach_rate_label_text, self.label_color,
                                  (self.approach_rate_label_pos_x, self.approach_rate_label_pos_y), "topleft")
         approach_rate_label.render(win)
-        """label_surface = self.label_font.render(self.approach_rate_label_text, True, self.label_color)
-        label_rect = label_surface.get_rect(topleft=(self.approach_rate_label_pos_x, self.approach_rate_label_pos_y))
-        win.blit(label_surface, label_rect)"""
 
         # Draw approach rate buttons
         for i in range(10):
-            button_pos_x = self.start_x + (self.button_width + self.button_margin) * i
-            button_rect = pygame.Rect(button_pos_x, self.approach_rate_button_pos_y, self.button_width,
-                                      self.button_height)
-            pygame.draw.rect(win, self.button_color, button_rect)
+            button_pos_x = self.start_x + 20 + (self.button_width + self.button_margin) * i
+            button_text = str(i + 1)
+            approach_rate_button = Button(self.button_font, button_text, self.button_text_color,
+                                       self.button_hover_color, self.button_selected_text_color,
+                                       (button_pos_x, self.approach_rate_button_pos_y), "center")
+            if approach_rate_button.is_clicked(self.input_manager):
+                self.data.approach_rate = i + 1
 
-            if button_rect.collidepoint(pygame.mouse.get_pos()):
-                if self.input_manager.is_mouse_clicked:  # Left mouse button pressed
-                    self.data.approach_rate = i + 1
-
-            button_text = str(i + 1)  # Button label from 1 to 10
-            if i + 1 == self.data.approach_rate:
-                button_text_surface = self.button_font.render(button_text, True, self.button_selected_text_color)
+            if self.data.approach_rate != (i + 1):
+                approach_rate_button.deselect()
             else:
-                button_text_surface = self.button_font.render(button_text, True, self.button_text_color)
-            button_text_rect = button_text_surface.get_rect(center=button_rect.center)
-            win.blit(button_text_surface, button_text_rect)
+                approach_rate_button.select()
+
+            approach_rate_button.render(win)
 
         # Start button
-        button_surface = self.label_font.render(self.start_label_text, True, self.label_color)
-        button_rect = button_surface.get_rect(bottomright=(self.screen_width - 25, self.screen_height - 25))
-        win.blit(button_surface, button_rect)
+        start_button = Button(self.button_font, self.start_label_text, self.button_text_color,
+                                       self.button_hover_color, self.button_selected_text_color,
+                                       (self.screen_width - 25, self.screen_height - 25), "bottomright")
 
-        if button_rect.collidepoint(pygame.mouse.get_pos()):
-            if self.input_manager.is_mouse_clicked:  # Left mouse button pressed
-                self.start_click = True
+        start_button.render(win)
+
+        if start_button.is_clicked(self.input_manager):
+            self.start_click = True
+            start_button.select()
 
         cursor_img, cursor_img_rect, cursor_pressed_img, cursor_pressed_img_rect = self.cursor_images
         if self.input_manager.is_mouse_holding:
@@ -746,6 +719,9 @@ class EndScene:
         self.end_label_text = "END"
         self.label_font = pygame.font.Font(None, 72)
         self.label_color = (255, 255, 255)  # White color
+        self.button_hover_color = (128, 240, 255)  # Neon Blue color
+        self.button_text_color = (255, 255, 255)  # White color
+        self.button_selected_text_color = (245, 255, 120)  # Light Yellow color
 
     def run(self):
         while not self.end_click:
@@ -769,82 +745,53 @@ class EndScene:
         game_over_label = Label(self.label_font, self.game_over_label_text, self.label_color,
                                     (self.screen_width // 2, 100), "center")
         game_over_label.render(win)
-        """label_surface = self.label_font.render(self.game_over_label_text, True, self.label_color)
-        label_rect = label_surface.get_rect(center=(self.screen_width // 2, 100))
-        win.blit(label_surface, label_rect)"""
 
         # Set Perfect Count Label
         perfect_count_label = Label(self.label_font, self.perfect_count_label_text, self.label_color,
                                 (700, 200), "topright")
         perfect_count_label.render(win)
-        """label_surface = self.label_font.render(self.perfect_count_label_text, True, self.label_color)
-        label_rect = label_surface.get_rect(topright=(750, 200))
-        win.blit(label_surface, label_rect)"""
 
         perfect_count_value_label = Label(self.label_font, "{}".format(self.data.perfect_count), self.label_color,
                                     (750, 200), "topleft")
         perfect_count_value_label.render(win)
-        """self.perfect_count = "{}".format(self.data.perfect_count)
-        label_surface = self.label_font.render(self.perfect_count, True, self.label_color)
-        label_rect = label_surface.get_rect(topleft=(850, 200))
-        win.blit(label_surface, label_rect)"""
 
         # Set Miss Count Label
         miss_count_label = Label(self.label_font, self.miss_count_label_text, self.label_color,
                                     (700, 280), "topright")
         miss_count_label.render(win)
-        """label_surface = self.label_font.render(self.miss_count_label_text, True, self.label_color)
-        label_rect = label_surface.get_rect(topright=(750, 280))
-        win.blit(label_surface, label_rect)"""
 
         miss_count_value_label = Label(self.label_font, "{}".format(self.data.miss_count), self.label_color,
                                           (750, 280), "topleft")
         miss_count_value_label.render(win)
-        """self.miss_count = "{}".format(self.data.miss_count)
-        label_surface = self.label_font.render(self.miss_count, True, self.label_color)
-        label_rect = label_surface.get_rect(topleft=(850, 280))
-        win.blit(label_surface, label_rect)"""
 
         # Set Highest Combo Label
         highest_combo_label = Label(self.label_font, self.highest_combo_label_text, self.label_color,
                                  (700, 360), "topright")
         highest_combo_label.render(win)
-        """label_surface = self.label_font.render(self.highest_combo_label_text, True, self.label_color)
-        label_rect = label_surface.get_rect(topright=(750, 360))
-        win.blit(label_surface, label_rect)"""
 
         highest_combo_value_label = Label(self.label_font, "{}".format(self.data.highest_combo), self.label_color,
                                        (750, 360), "topleft")
         highest_combo_value_label.render(win)
-        """self.highest_combo = "{}".format(self.data.highest_combo)
-        label_surface = self.label_font.render(self.highest_combo, True, self.label_color)
-        label_rect = label_surface.get_rect(topleft=(850, 360))
-        win.blit(label_surface, label_rect)"""
 
         # Set Total Score Label
         total_score_label = Label(self.label_font, self.total_score_label_text, self.label_color,
                                     (700, 440), "topright")
         total_score_label.render(win)
-        """label_surface = self.label_font.render(self.total_score_label_text, True, self.label_color)
-        label_rect = label_surface.get_rect(topright=(750, 440))
-        win.blit(label_surface, label_rect)"""
 
         total_score_value_label = Label(self.label_font, "{}".format(self.total_score), self.label_color,
                                           (750, 440), "topleft")
         total_score_value_label.render(win)
-        """self.total_score = "{}".format(self.data.score)
-        label_surface = self.label_font.render(self.total_score, True, self.label_color)
-        label_rect = label_surface.get_rect(topleft=(850, 440))
-        win.blit(label_surface, label_rect)"""
 
         # End button
-        button_surface = self.label_font.render(self.end_label_text, True, self.label_color)
-        button_rect = button_surface.get_rect(center=(self.screen_width // 2, 600))
-        win.blit(button_surface, button_rect)
+        end_button = Button(self.label_font, self.end_label_text, self.button_text_color,
+                              self.button_hover_color, self.button_selected_text_color,
+                            (self.screen_width // 2, 600), "center")
 
-        if button_rect.collidepoint(pygame.mouse.get_pos()):
-            if self.input_manager.is_mouse_clicked:  # Left mouse button pressed
-                self.end_click = True
+        end_button.render(win)
+
+        if end_button.is_clicked(self.input_manager):
+            self.end_click = True
+            end_button.select()
 
         cursor_img, cursor_img_rect, cursor_pressed_img, cursor_pressed_img_rect = self.cursor_images
         if self.input_manager.is_mouse_holding:
@@ -888,27 +835,40 @@ class LoadingScene:
         return "Loading Finished"
 
     def render(self):
-        pygame.mouse.set_visible(False)  # hides the cursor and will draw a cursor for playing rhythm game
+        """pygame.mouse.set_visible(False)  # hides the cursor and will draw a cursor for playing rhythm game
         win = pygame.Surface((self.screen_width, self.screen_height))
-        win.fill((0, 0, 0))
+        win.fill((0, 0, 0))"""
 
         font = pygame.font.Font(None, 70)  # Font for the score numbers
-        loading_text = font.render("LOADING ...", True, (255, 255, 255))
-        loading_text_rect = loading_text.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
-        win.blit(loading_text, loading_text_rect)
+        text_color = (255, 255, 255)
+        loading_text = ["LOADING .", "LOADING ..", "LOADING ..."]
+        i = 0
+        while not self.task_done.is_set():
+            pygame.mouse.set_visible(False)  # hides the cursor and will draw a cursor for playing rhythm game
+            win = pygame.Surface((self.screen_width, self.screen_height))
+            win.fill((0, 0, 0))
 
-        cursor_img, cursor_img_rect, cursor_pressed_img, cursor_pressed_img_rect = self.cursor_images
-        if self.input_manager.is_mouse_holding:
-            cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
-            win.blit(cursor_pressed_img, cursor_pressed_img_rect)  # draw the cursor
-        else:
-            cursor_img_rect.center = pygame.mouse.get_pos()
-            win.blit(cursor_img, cursor_img_rect)
+            if i//30 == 3:
+                i = 0
+            else:
+                #Loading label
+                loading_label = Label(font, loading_text[i//30], text_color,
+                                      (self.screen_width // 2, self.screen_height // 2), "center")
+                loading_label.render(win)
 
-        self.window.blit(win, win.get_rect())
-        pygame.event.pump()
-        pygame.display.update()
-        self.clock.tick(60)
+            cursor_img, cursor_img_rect, cursor_pressed_img, cursor_pressed_img_rect = self.cursor_images
+            if self.input_manager.is_mouse_holding:
+                cursor_pressed_img_rect.center = pygame.mouse.get_pos()  # update position
+                win.blit(cursor_pressed_img, cursor_pressed_img_rect)  # draw the cursor
+            else:
+                cursor_img_rect.center = pygame.mouse.get_pos()
+                win.blit(cursor_img, cursor_img_rect)
+
+            self.window.blit(win, win.get_rect())
+            pygame.event.pump()
+            pygame.display.update()
+            self.clock.tick(60)
+            i += 1
 
 
 class ReadyScene:
@@ -938,17 +898,27 @@ class ReadyScene:
         win.fill((0, 0, 0))
 
         font = pygame.font.Font(None, 70)  # Font for the score numbers
-        loading_text = font.render("Loading Finished", True, (255, 255, 255))
-        loading_text_rect = loading_text.get_rect(center=(self.screen_width // 2, self.screen_height // 2 - 100))
-        win.blit(loading_text, loading_text_rect)
+        loading_text = "Loading Finished"
+        play_text = "Play"
+        text_color = (255, 255, 255)
+        hover_color = (128, 240, 255)
+        selected_text_color = (245, 255, 120)
 
-        button_surface = font.render("Play", True, (255, 255, 255))
-        button_rect = button_surface.get_rect(center=(self.screen_width // 2, self.screen_height // 2 + 20))
-        win.blit(button_surface, button_rect)
+        #Loading Text
+        loading_label = Label(font, loading_text, text_color,
+                                  (self.screen_width // 2, self.screen_height // 2 - 100), "center")
+        loading_label.render(win)
 
-        if button_rect.collidepoint(pygame.mouse.get_pos()):
-            if self.input_manager.is_mouse_clicked:  # Left mouse button pressed
-                self.play_selected = True
+        #Play button
+        play_button = Button(font, play_text, text_color,
+                              hover_color, selected_text_color,
+                              (self.screen_width // 2, self.screen_height // 2 + 20), "center")
+
+        play_button.render(win)
+
+        if play_button.is_clicked(self.input_manager):
+            self.play_selected = True
+            play_button.select()
 
         cursor_img, cursor_img_rect, cursor_pressed_img, cursor_pressed_img_rect = self.cursor_images
         if self.input_manager.is_mouse_holding:
