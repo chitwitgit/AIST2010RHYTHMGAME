@@ -6,7 +6,7 @@ from pygame import mixer
 from utils import notedetection
 from utils.youtubeDL import download_youtube_audio
 from utils.input_manager import InputManager
-from utils.button import Button
+from utils.button import Button, Label
 import os
 from utils.settings import settings
 from dataclasses import dataclass
@@ -630,15 +630,18 @@ class MenuScene:
         win.fill((0, 0, 0))
 
         # Menu label
-        #menu_label = Button(self.label_font, self.menu_label_text, self.label_color)
-        label_surface = self.label_font.render(self.menu_label_text, True, self.label_color)
+        menu_label = Label(self.label_font, self.menu_label_text, self.label_color, (self.screen_width // 2, 100), "center")
+        menu_label.render(win)
+        """label_surface = self.label_font.render(self.menu_label_text, True, self.label_color)
         label_rect = label_surface.get_rect(center=(self.screen_width // 2, 100))
-        win.blit(label_surface, label_rect)
+        win.blit(label_surface, label_rect)"""
 
         # Draw difficulty label
-        label_surface = self.label_font.render(self.difficulty_label_text, True, self.label_color)
+        difficulty_label = Label(self.label_font, self.difficulty_label_text, self.label_color, (self.difficulty_label_pos_x, self.difficulty_label_pos_y), "topleft")
+        difficulty_label.render(win)
+        """label_surface = self.label_font.render(self.difficulty_label_text, True, self.label_color)
         label_rect = label_surface.get_rect(topleft=(self.difficulty_label_pos_x, self.difficulty_label_pos_y))
-        win.blit(label_surface, label_rect)
+        win.blit(label_surface, label_rect)"""
 
         # Draw difficulty buttons
         for i in range(10):
@@ -660,7 +663,6 @@ class MenuScene:
                 difficulty_button.select()
 
             difficulty_button.render(win)
-            print(self.data.difficulty)
 
             """if button_rect.collidepoint(pygame.mouse.get_pos()):
                 if self.input_manager.is_mouse_clicked:  # Left mouse button pressed
@@ -675,9 +677,12 @@ class MenuScene:
             win.blit(button_text_surface, button_text_rect)"""
 
         # Draw approach rate label
-        label_surface = self.label_font.render(self.approach_rate_label_text, True, self.label_color)
+        approach_rate_label = Label(self.label_font, self.approach_rate_label_text, self.label_color,
+                                 (self.approach_rate_label_pos_x, self.approach_rate_label_pos_y), "topleft")
+        approach_rate_label.render(win)
+        """label_surface = self.label_font.render(self.approach_rate_label_text, True, self.label_color)
         label_rect = label_surface.get_rect(topleft=(self.approach_rate_label_pos_x, self.approach_rate_label_pos_y))
-        win.blit(label_surface, label_rect)
+        win.blit(label_surface, label_rect)"""
 
         # Draw approach rate buttons
         for i in range(10):
@@ -763,49 +768,76 @@ class EndScene:
         win.fill((0, 0, 0))
 
         # Set Game Over Label
-        label_surface = self.label_font.render(self.game_over_label_text, True, self.label_color)
+        game_over_label = Label(self.label_font, self.game_over_label_text, self.label_color,
+                                    (self.screen_width // 2, 100), "center")
+        game_over_label.render(win)
+        """label_surface = self.label_font.render(self.game_over_label_text, True, self.label_color)
         label_rect = label_surface.get_rect(center=(self.screen_width // 2, 100))
-        win.blit(label_surface, label_rect)
+        win.blit(label_surface, label_rect)"""
 
         # Set Perfect Count Label
-        label_surface = self.label_font.render(self.perfect_count_label_text, True, self.label_color)
+        perfect_count_label = Label(self.label_font, self.perfect_count_label_text, self.label_color,
+                                (700, 200), "topright")
+        perfect_count_label.render(win)
+        """label_surface = self.label_font.render(self.perfect_count_label_text, True, self.label_color)
         label_rect = label_surface.get_rect(topright=(750, 200))
-        win.blit(label_surface, label_rect)
+        win.blit(label_surface, label_rect)"""
 
-        self.perfect_count = "{}".format(self.data.perfect_count)
+        perfect_count_value_label = Label(self.label_font, "{}".format(self.data.perfect_count), self.label_color,
+                                    (750, 200), "topleft")
+        perfect_count_value_label.render(win)
+        """self.perfect_count = "{}".format(self.data.perfect_count)
         label_surface = self.label_font.render(self.perfect_count, True, self.label_color)
         label_rect = label_surface.get_rect(topleft=(850, 200))
-        win.blit(label_surface, label_rect)
+        win.blit(label_surface, label_rect)"""
 
         # Set Miss Count Label
-        label_surface = self.label_font.render(self.miss_count_label_text, True, self.label_color)
+        miss_count_label = Label(self.label_font, self.miss_count_label_text, self.label_color,
+                                    (700, 280), "topright")
+        miss_count_label.render(win)
+        """label_surface = self.label_font.render(self.miss_count_label_text, True, self.label_color)
         label_rect = label_surface.get_rect(topright=(750, 280))
-        win.blit(label_surface, label_rect)
+        win.blit(label_surface, label_rect)"""
 
-        self.miss_count = "{}".format(self.data.miss_count)
+        miss_count_value_label = Label(self.label_font, "{}".format(self.data.miss_count), self.label_color,
+                                          (750, 280), "topleft")
+        miss_count_value_label.render(win)
+        """self.miss_count = "{}".format(self.data.miss_count)
         label_surface = self.label_font.render(self.miss_count, True, self.label_color)
         label_rect = label_surface.get_rect(topleft=(850, 280))
-        win.blit(label_surface, label_rect)
+        win.blit(label_surface, label_rect)"""
 
         # Set Highest Combo Label
-        label_surface = self.label_font.render(self.highest_combo_label_text, True, self.label_color)
+        highest_combo_label = Label(self.label_font, self.highest_combo_label_text, self.label_color,
+                                 (700, 360), "topright")
+        highest_combo_label.render(win)
+        """label_surface = self.label_font.render(self.highest_combo_label_text, True, self.label_color)
         label_rect = label_surface.get_rect(topright=(750, 360))
-        win.blit(label_surface, label_rect)
+        win.blit(label_surface, label_rect)"""
 
-        self.highest_combo = "{}".format(self.data.highest_combo)
+        highest_combo_value_label = Label(self.label_font, "{}".format(self.data.highest_combo), self.label_color,
+                                       (750, 360), "topleft")
+        highest_combo_value_label.render(win)
+        """self.highest_combo = "{}".format(self.data.highest_combo)
         label_surface = self.label_font.render(self.highest_combo, True, self.label_color)
         label_rect = label_surface.get_rect(topleft=(850, 360))
-        win.blit(label_surface, label_rect)
+        win.blit(label_surface, label_rect)"""
 
         # Set Total Score Label
-        label_surface = self.label_font.render(self.total_score_label_text, True, self.label_color)
+        total_score_label = Label(self.label_font, self.total_score_label_text, self.label_color,
+                                    (700, 440), "topright")
+        total_score_label.render(win)
+        """label_surface = self.label_font.render(self.total_score_label_text, True, self.label_color)
         label_rect = label_surface.get_rect(topright=(750, 440))
-        win.blit(label_surface, label_rect)
+        win.blit(label_surface, label_rect)"""
 
-        self.total_score = "{}".format(self.data.score)
+        total_score_value_label = Label(self.label_font, "{}".format(self.total_score), self.label_color,
+                                          (750, 440), "topleft")
+        total_score_value_label.render(win)
+        """self.total_score = "{}".format(self.data.score)
         label_surface = self.label_font.render(self.total_score, True, self.label_color)
         label_rect = label_surface.get_rect(topleft=(850, 440))
-        win.blit(label_surface, label_rect)
+        win.blit(label_surface, label_rect)"""
 
         # End button
         button_surface = self.label_font.render(self.end_label_text, True, self.label_color)

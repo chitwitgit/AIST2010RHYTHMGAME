@@ -45,3 +45,30 @@ class Button:
         if self.rect.collidepoint(input_manager.mouse_pos) and input_manager.is_mouse_clicked:
             return True
         return False
+
+
+class Label:
+    def __init__(self, font, text, color, coords, pos):
+        self.font = font
+        self.color = color
+        self.text = text
+        self.coords = coords
+        self.pos = pos
+
+    def set_text(self, text):
+        self.text = text
+
+    def render(self, surf):
+        label_surface = self.font.render(self.text, True, self.color)
+        if self.pos == "center":
+            label_rect = label_surface.get_rect(center=self.coords)
+        elif self.pos == "topleft":
+            label_rect = label_surface.get_rect(topleft=self.coords)
+        elif self.pos == "topright":
+            label_rect = label_surface.get_rect(topright=self.coords)
+        elif self.pos == "bottomleft":
+            label_rect = label_surface.get_rect(bottomleft=self.coords)
+        elif self.pos == "bottomright":
+            label_rect = label_surface.get_rect(bottomright=self.coords)
+
+        surf.blit(label_surface, label_rect)
