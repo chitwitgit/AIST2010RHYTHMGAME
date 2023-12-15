@@ -485,7 +485,10 @@ class GameScene:
 
 class PauseScene:
     def __init__(self, window, cursor_images):
+        self.quit_click = False
         self.resume_selected = False
+        self.restart_click = False
+        self.menu_click = False
         self.window = window
         self.screen_width, self.screen_height = window.get_size()
         self.paused_screen = None  # Stores the last screen displayed in the game
@@ -496,7 +499,7 @@ class PauseScene:
 
     def run(self):
         self.resume_selected = False
-        while not self.resume_selected:
+        while not self.resume_selected or not self.restart_click or not self.menu_click or not self.quit_click:
             self.input_manager.update()
             self.render()
 
@@ -511,11 +514,58 @@ class PauseScene:
             if self.resume_selected:
                 self.countdown()
                 return "Resume"
+            elif self.restart_click:
+                return "Load"
+            elif self.menu_click:
+                return "Menu"
+            elif self.quit_click:
+                return "End"
 
     def render(self):
         win = pygame.Surface((self.screen_width, self.screen_height))
         win.blit(self.paused_screen, (0, 0))  # Display the last screen displayed in game scene
         self._apply_whiteness(win)
+
+        font = pygame.font.Font(None, 70)  # Font for the score numbers
+        text_color = (0, 0, 0)  # Black color
+        hover_color = (128, 240, 255)  # Neon Blue color
+        selected_text_color = (245, 255, 120)  # Light Yellow color
+
+        # Paused label
+        paused_label = Label(font, "GAME PAUSED", text_color, (self.screen_width // 2, 100), "center")
+        paused_label.render(win)
+
+        # Quit button
+        quit_button = Button(font, "QUIT", text_color, hover_color, selected_text_color, (self.screen_width - 25, 650), "bottomright")
+        quit_button.render(win)
+
+        if quit_button.is_clicked(self.input_manager):
+            self.quit_click = True
+            quit_button.select()
+
+        # Menu button
+        menu_button = Button(font, "MENU", text_color, hover_color, selected_text_color, (25, 650), "bottomleft")
+        menu_button.render(win)
+
+        if menu_button.is_clicked(self.input_manager):
+            self.menu_click = True
+            menu_button.select()
+
+        # Resume button
+        resume_button = Button(font, "RESUME", text_color, hover_color, selected_text_color, (self.screen_width // 2, 250), "center")
+        resume_button.render(win)
+
+        if resume_button.is_clicked(self.input_manager):
+            self.resume_selected = True
+            resume_button.select()
+
+        # Restart button
+        restart_button = Button(font, "RESTART", text_color, hover_color, selected_text_color, (self.screen_width // 2, 400), "center")
+        restart_button.render(win)
+
+        if restart_button.is_clicked(self.input_manager):
+            self.restart_click = True
+            restart_button.select()
 
         # Display cursor image
         cursor_img, cursor_img_rect, cursor_pressed_img, cursor_pressed_img_rect = self.cursor_images
@@ -699,6 +749,7 @@ class MenuScene:
 class EndScene:
     def __init__(self, window, data, cursor_images):
         self.end_click = False
+        self.menu_click = False
         self.window = window
         self.screen_width, self.screen_height = window.get_size()
         self.input_manager = InputManager()
@@ -709,14 +760,11 @@ class EndScene:
 
         self.game_over_label_text = "GAME OVER"
         self.perfect_count_label_text = "Perfect Count:"
-        self.perfect_count = "{}".format(self.data.perfect_count)
         self.miss_count_label_text = "Miss Count:"
-        self.miss_count = "{}".format(self.data.miss_count)
         self.highest_combo_label_text = "Highest Combo:"
-        self.highest_combo = "{}".format(self.data.highest_combo)
         self.total_score_label_text = "Total Score:"
-        self.total_score = "{}".format(self.data.score)
-        self.end_label_text = "END"
+        self.end_label_text = "QUIT"
+        self.menu_label_text = "MENU"
         self.label_font = pygame.font.Font(None, 72)
         self.label_color = (255, 255, 255)  # White color
         self.button_hover_color = (128, 240, 255)  # Neon Blue color
@@ -724,7 +772,7 @@ class EndScene:
         self.button_selected_text_color = (245, 255, 120)  # Light Yellow color
 
     def run(self):
-        while not self.end_click:
+        while not self.end_click or self.menu_click:
             self.input_manager.update()
             self.render()
             for event in pygame.event.get():
@@ -735,6 +783,8 @@ class EndScene:
                         return "Stop Game"
             if self.end_click:
                 return "Stop Game"
+            elif self.menu_click:
+                return "Menu"
 
     def render(self):
         pygame.mouse.set_visible(False)  # hides the cursor and will draw a cursor for playing rhythm game
@@ -778,20 +828,31 @@ class EndScene:
                                     (700, 440), "topright")
         total_score_label.render(win)
 
-        total_score_value_label = Label(self.label_font, "{}".format(self.total_score), self.label_color,
+        total_score_value_label = Label(self.label_font, "{}".format(self.data.score), self.label_color,
                                           (750, 440), "topleft")
         total_score_value_label.render(win)
 
         # End button
         end_button = Button(self.label_font, self.end_label_text, self.button_text_color,
                               self.button_hover_color, self.button_selected_text_color,
-                            (self.screen_width // 2, 600), "center")
+                            (self.screen_width - 25, 650), "bottomright")
 
         end_button.render(win)
 
         if end_button.is_clicked(self.input_manager):
             self.end_click = True
             end_button.select()
+
+        # Restart button
+        menu_button = Button(self.label_font, self.menu_label_text, self.button_text_color,
+                            self.button_hover_color, self.button_selected_text_color,
+                            (25, 650), "bottomleft")
+
+        menu_button.render(win)
+
+        if menu_button.is_clicked(self.input_manager):
+            self.menu_click = True
+            menu_button.select()
 
         cursor_img, cursor_img_rect, cursor_pressed_img, cursor_pressed_img_rect = self.cursor_images
         if self.input_manager.is_mouse_holding:
@@ -835,10 +896,6 @@ class LoadingScene:
         return "Loading Finished"
 
     def render(self):
-        """pygame.mouse.set_visible(False)  # hides the cursor and will draw a cursor for playing rhythm game
-        win = pygame.Surface((self.screen_width, self.screen_height))
-        win.fill((0, 0, 0))"""
-
         font = pygame.font.Font(None, 70)  # Font for the score numbers
         text_color = (255, 255, 255)
         loading_text = ["LOADING .", "LOADING ..", "LOADING ..."]
@@ -899,8 +956,8 @@ class ReadyScene:
         win.fill((0, 0, 0))
 
         font = pygame.font.Font(None, 70)  # Font for the score numbers
-        loading_text = "Loading Finished"
-        play_text = "Play"
+        loading_text = "Are YOU Ready?"
+        play_text = ">>> PLAY <<<"
         text_color = (255, 255, 255)
         hover_color = (128, 240, 255)
         selected_text_color = (245, 255, 120)
@@ -913,7 +970,7 @@ class ReadyScene:
         #Play button
         play_button = Button(font, play_text, text_color,
                               hover_color, selected_text_color,
-                              (self.screen_width // 2, self.screen_height // 2 + 20), "center")
+                              (self.screen_width // 2, self.screen_height // 2 + 100), "center")
 
         play_button.render(win)
 
