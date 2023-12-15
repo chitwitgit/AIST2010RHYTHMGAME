@@ -20,11 +20,9 @@ class Button:
         return self.rect.collidepoint(pygame.mouse.get_pos())
 
     def render(self, surf):
-        """ if self.hover(pygame.mouse.get_pos()):
+        if self.hover:
             color = self.hover_color
         elif self.selected:
-            color = self.selected_color"""
-        if self.selected:
             color = self.selected_color
         else:
             color = self.color
