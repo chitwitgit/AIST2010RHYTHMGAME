@@ -3,6 +3,9 @@ from utils.input_manager import InputManager
 
 
 class Button:
+    """
+    Button class to represent clickable text in different scenes
+    """
     def __init__(self, font, text, color, hover_color, selected_color, coords, pos):
         self.font = font
         self.text = text
@@ -15,25 +18,28 @@ class Button:
         self.input_manager = InputManager()
 
         self.surface = self.font.render(self.text, True, color)
-        if self.pos == "center":
-            label_rect = self.surface.get_rect(center=self.coords)
-        elif self.pos == "topleft":
-            label_rect = self.surface.get_rect(topleft=self.coords)
+        if self.pos == "topleft":
+            self.rect = self.surface.get_rect(topleft=self.coords)
         elif self.pos == "topright":
-            label_rect = self.surface.get_rect(topright=self.coords)
+            self.rect = self.surface.get_rect(topright=self.coords)
         elif self.pos == "bottomleft":
-            label_rect = self.surface.get_rect(bottomleft=self.coords)
-        else: # bottom right
-            label_rect = self.surface.get_rect(bottomright=self.coords)
-        self.rect = label_rect
-
-    def set_text(self, text):
-        self.text = text
+            self.rect = self.surface.get_rect(bottomleft=self.coords)
+        elif self.pos == "bottomright":
+            self.rect = self.surface.get_rect(bottomright=self.coords)
+        else:
+            self.rect = self.surface.get_rect(center=self.coords)
 
     @property
     # Check if mouse is hovering over the button
     def hover(self):
         return self.rect.collidepoint(self.input_manager.mouse_pos)
+
+    @property
+    # Detect clicks on the button
+    def is_clicked(self):
+        if self.rect.collidepoint(self.input_manager.mouse_pos) and self.input_manager.is_mouse_clicked:
+            return True
+        return False
 
     def render(self, surf):
         self.input_manager.update()
@@ -52,15 +58,11 @@ class Button:
     def deselect(self):
         self.selected = False
 
-    # Detect clicks on the button
-    @property
-    def is_clicked(self):
-        if self.rect.collidepoint(self.input_manager.mouse_pos) and self.input_manager.is_mouse_clicked:
-            return True
-        return False
-
 
 class Label:
+    """
+    Label class to represent displayable text in different scenes
+    """
     def __init__(self, font, text, color, coords, pos):
         self.font = font
         self.color = color
@@ -68,20 +70,17 @@ class Label:
         self.coords = coords
         self.pos = pos
 
-    def set_text(self, text):
-        self.text = text
+        self.label_surface = self.font.render(self.text, True, self.color)
+        if self.pos == "topleft":
+            self.label_rect = self.label_surface.get_rect(topleft=self.coords)
+        elif self.pos == "topright":
+            self.label_rect = self.label_surface.get_rect(topright=self.coords)
+        elif self.pos == "bottomleft":
+            self.label_rect = self.label_surface.get_rect(bottomleft=self.coords)
+        elif self.pos == "bottomright":
+            self.label_rect = self.label_surface.get_rect(bottomright=self.coords)
+        else:
+            self.rect = self.surface.get_rect(center=self.coords)
 
     def render(self, surf):
-        label_surface = self.font.render(self.text, True, self.color)
-        if self.pos == "center":
-            label_rect = label_surface.get_rect(center=self.coords)
-        elif self.pos == "topleft":
-            label_rect = label_surface.get_rect(topleft=self.coords)
-        elif self.pos == "topright":
-            label_rect = label_surface.get_rect(topright=self.coords)
-        elif self.pos == "bottomleft":
-            label_rect = label_surface.get_rect(bottomleft=self.coords)
-        elif self.pos == "bottomright":
-            label_rect = label_surface.get_rect(bottomright=self.coords)
-
-        surf.blit(label_surface, label_rect)
+        surf.blit(self.label_surface, self.label_rect)

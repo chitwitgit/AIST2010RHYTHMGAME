@@ -484,6 +484,9 @@ class GameScene:
 
 
 class PauseScene:
+    """
+    Contains all the logic in the game paused state
+    """
     def __init__(self, window, cursor_images):
         self.quit_click = False
         self.resume_selected = False
@@ -536,7 +539,8 @@ class PauseScene:
         paused_label.render(win)
 
         # Quit button
-        quit_button = Button(font, "QUIT", text_color, hover_color, selected_text_color, (self.screen_width - 25, 650), "bottomright")
+        quit_button = Button(font, "QUIT", text_color, hover_color, selected_text_color, (self.screen_width - 25, 650),
+                             "bottomright")
         quit_button.render(win)
 
         if quit_button.is_clicked:
@@ -552,7 +556,8 @@ class PauseScene:
             menu_button.select()
 
         # Resume button
-        resume_button = Button(font, "RESUME", text_color, hover_color, selected_text_color, (self.screen_width // 2, 250), "center")
+        resume_button = Button(font, "RESUME", text_color, hover_color, selected_text_color,
+                               (self.screen_width // 2, 250), "center")
         resume_button.render(win)
 
         if resume_button.is_clicked:
@@ -560,7 +565,8 @@ class PauseScene:
             resume_button.select()
 
         # Restart button
-        restart_button = Button(font, "RESTART", text_color, hover_color, selected_text_color, (self.screen_width // 2, 400), "center")
+        restart_button = Button(font, "RESTART", text_color, hover_color, selected_text_color,
+                                (self.screen_width // 2, 400), "center")
         restart_button.render(win)
 
         if restart_button.is_clicked:
@@ -590,7 +596,8 @@ class PauseScene:
         for i in range(countdown_time * fps):
             win = pygame.Surface((self.screen_width, self.screen_height))
             win.blit(self.paused_screen, (0, 0))
-            countdown_label = Label(font, str(countdown_time - i // fps), (255, 255, 255), (self.screen_width // 2, self.screen_height // 2), "center")
+            countdown_label = Label(font, str(countdown_time - i // fps), (255, 255, 255),
+                                    (self.screen_width // 2, self.screen_height // 2), "center")
             countdown_label.render(win)
             cursor_img, cursor_img_rect, cursor_pressed_img, cursor_pressed_img_rect = self.cursor_images
             if self.input_manager.is_mouse_holding:
@@ -617,6 +624,9 @@ class PauseScene:
 
 
 class MenuScene:
+    """
+    Contains all the logic in the menu scene
+    """
     def __init__(self, window, data, cursor_images):
         self.start_click = False
         self.window = window
@@ -677,19 +687,22 @@ class MenuScene:
         win.fill((0, 0, 0))
 
         # Menu label
-        menu_label = Label(self.label_font, self.menu_label_text, self.label_color, (self.screen_width // 2, 100), "center")
+        menu_label = Label(self.label_font, self.menu_label_text, self.label_color, (self.screen_width // 2, 100),
+                           "center")
         menu_label.render(win)
 
         # Draw difficulty label
-        difficulty_label = Label(self.label_font, self.difficulty_label_text, self.label_color, (self.difficulty_label_pos_x, self.difficulty_label_pos_y), "topleft")
+        difficulty_label = Label(self.label_font, self.difficulty_label_text, self.label_color,
+                                 (self.difficulty_label_pos_x, self.difficulty_label_pos_y), "topleft")
         difficulty_label.render(win)
 
         # Draw difficulty buttons
         for i in range(10):
             button_pos_x = self.start_x + 20 + (self.button_width + self.button_margin) * i
             button_text = str(i + 1)
-            difficulty_button = Button(self.button_font, button_text, self.button_text_color,
-                                       self.button_hover_color, self.button_selected_text_color, (button_pos_x, self.difficulty_button_pos_y), "center")
+            difficulty_button = Button(self.button_font, button_text, self.button_text_color, self.button_hover_color,
+                                       self.button_selected_text_color, (button_pos_x, self.difficulty_button_pos_y),
+                                       "center")
             if difficulty_button.is_clicked:
                 self.data.difficulty = i + 1
 
@@ -747,6 +760,9 @@ class MenuScene:
 
 
 class EndScene:
+    """
+    Contains all the logic in the end scene
+    """
     def __init__(self, window, data, cursor_images):
         self.end_click = False
         self.menu_click = False
@@ -868,6 +884,9 @@ class EndScene:
 
 
 class LoadingScene:
+    """
+    Contains all the logic in the loading scene
+    """
     def __init__(self, window, task, cursor_images):
         self.window = window
         self.screen_width, self.screen_height = window.get_size()
@@ -900,13 +919,13 @@ class LoadingScene:
         text_color = (255, 255, 255)
         loading_text = ["LOADING .", "LOADING ..", "LOADING ..."]
         i = 0
-        while not self.task_done.is_set():
+        while not self.task_done.is_set():  # loop for loading
             pygame.mouse.set_visible(False)  # hides the cursor and will draw a cursor for playing rhythm game
             win = pygame.Surface((self.screen_width, self.screen_height))
             win.fill((0, 0, 0))
 
             fps = 30
-            if i//fps == 3:
+            if i//fps == 3:  # prevent overflow of index
                 i = 0
             else:
                 #Loading label
@@ -930,6 +949,9 @@ class LoadingScene:
 
 
 class ReadyScene:
+    """
+    Contains all the logic in the ready scene
+    """
     def __init__(self, window, cursor_images):
         self.play_selected = False
         self.window = window
@@ -958,16 +980,16 @@ class ReadyScene:
         font = pygame.font.Font(None, 70)  # Font for the score numbers
         loading_text = "Are YOU Ready?"
         play_text = ">>> PLAY <<<"
-        text_color = (255, 255, 255)
-        hover_color = (128, 240, 255)
-        selected_text_color = (245, 255, 120)
+        text_color = (255, 255, 255)  # White color
+        hover_color = (128, 240, 255)  # Neon blue color
+        selected_text_color = (245, 255, 120)  # Light yellow color
 
-        #Loading Text
+        # Loading Text
         loading_label = Label(font, loading_text, text_color,
                                   (self.screen_width // 2, self.screen_height // 2 - 100), "center")
         loading_label.render(win)
 
-        #Play button
+        # Play button
         play_button = Button(font, play_text, text_color,
                               hover_color, selected_text_color,
                               (self.screen_width // 2, self.screen_height // 2 + 100), "center")
