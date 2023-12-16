@@ -244,7 +244,6 @@ class GameScene:
         """
         Loads files for the audio and computed musical information
         :param keep_files: Saves the files to the disk when finished
-        :param use_new_files: Deletes the saved files and use new ones, set to True if selecting a new song,
         False if load from existing files
         """
         (youtube_link, seed, given_tempo,
