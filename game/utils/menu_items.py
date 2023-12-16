@@ -1,7 +1,3 @@
-import pygame
-from utils.input_manager import InputManager
-
-
 class Button:
     """
     Button class to represent clickable text in different scenes

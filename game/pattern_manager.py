@@ -1,6 +1,6 @@
 import random
 
-from utils.patterns import *
+from game.utils.patterns import *
 from itertools import groupby
 
 

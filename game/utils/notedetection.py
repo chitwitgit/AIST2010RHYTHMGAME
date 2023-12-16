@@ -6,14 +6,14 @@ from scipy.special import rel_entr
 
 
 def merge_close_onset(onset_times, onset_durations, tempo, precision=0.125):
-    '''
+    """
     Merge very closely located onsets
     :param onset_times: start time of onset
     :param onset_durations: duration of onset
     :param tempo: tempo of song
     :param precision: decision boundary for judging close onsets
     :return: merged onset times and durations
-    '''
+    """
     spb = 60 / tempo * precision
     i = 0
     length = len(onset_times)
@@ -30,14 +30,14 @@ def merge_close_onset(onset_times, onset_durations, tempo, precision=0.125):
 
 
 def remove_noisy_onset(onset_times, onset_durations, x, sr):
-    '''
+    """
     Filter out noise in onsets
     :param onset_times: onset start time
     :param onset_durations: onset durations
     :param x: audio input
     :param sr: sampling rate
     :return: filtered onset times and durations
-    '''
+    """
     onset_index = librosa.time_to_samples(onset_times, sr=sr)
     onset_index_range = onset_index.reshape(-1, 1) + np.arange(0, 200)
     onset_sample_range = x[onset_index_range]
@@ -54,7 +54,7 @@ def remove_noisy_onset(onset_times, onset_durations, x, sr):
 
 def merge_vocal_background_with_padding(vocal_onset, vocal_duration, background_onset, background_duration, tempo,
                                         precision=1.0):
-    '''
+    """
     Merge vocal and background onsets, add padding onsets as well
     :param vocal_onset: vocal onsets
     :param vocal_duration: vocal onset durations
@@ -63,7 +63,7 @@ def merge_vocal_background_with_padding(vocal_onset, vocal_duration, background_
     :param tempo: tempo of song
     :param precision: precision for padding
     :return: merged + padded onset times and durations, onset type label
-    '''
+    """
     spb = 60 / tempo * precision
     merge_onset = []
     merge_duration = []
@@ -114,7 +114,7 @@ def merge_vocal_background_with_padding(vocal_onset, vocal_duration, background_
 
 
 def vocal_separation(y, sr):
-    '''
+    """
     Perform vocal separation on song
     :param y: the audio input
     :param sr: sampling rate
@@ -123,7 +123,7 @@ def vocal_separation(y, sr):
     ********************************************************************************
     reference: https://librosa.org/doc/main/auto_examples/plot_vocal_separation.html
     ********************************************************************************
-    '''
+    """
     # compute the spectrogram magnitude and phase
     S_full, phase = librosa.magphase(librosa.stft(y))
 
@@ -174,14 +174,14 @@ def load_audio(filename):
 
 
 def onset_roundings(onset_times, onset_durations, tempo, precision=0.125):
-    '''
+    """
     Perform onset roundings with phase shift
     :param onset_times: onset start time
     :param onset_durations: onset durations
     :param tempo: song tempo
     :param precision: alignment precision
     :return: aligned onset time and duration
-    '''
+    """
     spb = 60 / tempo * precision
     phase_shifts = np.linspace(0, spb, num=60)  # Generate a range of phase shifts
 
@@ -202,7 +202,7 @@ def onset_roundings(onset_times, onset_durations, tempo, precision=0.125):
 
 
 def onset_paddings(onset_times, onset_durations, tempo, abs_x, precisions=1.0, sr=22050):
-    '''
+    """
     Perform padding between onsets
     :param onset_times: onset start time
     :param onset_durations: onset duration
@@ -211,7 +211,7 @@ def onset_paddings(onset_times, onset_durations, tempo, abs_x, precisions=1.0, s
     :param precisions: padding precision
     :param sr: sampling rate
     :return: padded onset time, duration
-    '''
+    """
     spb = 60 / tempo * precisions
     local_range = 100
     onset_samples = librosa.time_to_samples(onset_times, sr=sr)
@@ -247,7 +247,7 @@ def onset_paddings(onset_times, onset_durations, tempo, abs_x, precisions=1.0, s
 
 
 def onset_detection(x, fs, fft_length=1024, fft_hop_length=512, tempo=None):
-    '''
+    """
     Main call of onset information retrieval
     :param x: audio input signal
     :param fs: sampling rate
@@ -255,7 +255,7 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512, tempo=None):
     :param fft_hop_length: hop size for stft frame
     :param tempo: song tempo
     :return: onset time, duration, bars (in which onsets are located), tempo
-    '''
+    """
     x_foreground, x_background = vocal_separation(copy.deepcopy(x), fs)
     onset_list = []
     duration_list = []
@@ -303,7 +303,7 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512, tempo=None):
 
 
 def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=512, sr=22050, tolerance=6, use_max_freq_peak=False, use_max_freq_amp=False, use_mean_square=False):
-    '''
+    """
     Detect length of each onset
     :param x: input audio signal
     :param y: absolute of stft on x
@@ -316,7 +316,7 @@ def onset_length_detection(x, y, onset_samples, fft_length=1024, fft_hop_length=
     :param use_max_freq_amp: using max frequency amplitude  as comparison metric (default: False)
     :param use_mean_square: using mean square as comparision metric (default: False)
     :return: onset durations
-    '''
+    """
     residual_size = fft_length - fft_hop_length
     filtered_onset_samples = onset_samples
     filtered_onset_samples[onset_samples < fft_length] = fft_length - residual_size

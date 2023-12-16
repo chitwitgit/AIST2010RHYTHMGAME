@@ -1,23 +1,21 @@
 import pygame
 import numpy as np
 import random
-from pattern_manager import PatternManager
+from game.pattern_manager import PatternManager
 from pygame import mixer
-from utils import notedetection
-from utils.youtubeDL import download_youtube_audio
-from utils.input_manager import InputManager
-from utils.button import Button, Label
+from game.utils import notedetection
+from game.utils.youtubeDL import download_youtube_audio
+from game.utils.input_manager import InputManager
+from game.utils.menu_items import Button, Label
 import os
-from utils.settings import settings
 from dataclasses import dataclass
 import threading
-
-youtube_link, seed, given_tempo, difficulty, approach_rate, mode, is_use_new_files, use_game_background = settings
 
 
 # A dataclass storing some variables about the game
 @dataclass
 class GameData:
+    seed: int
     difficulty: int  # Range: 1-10
     score: int
     approach_rate: int  # Range: 1-10
@@ -31,12 +29,18 @@ class Game:
     """
     The Game class manages the control flow of different scenes
     """
-    def __init__(self):
+
+    def __init__(self, settings):
+        self.settings = settings
+        (youtube_link, seed, given_tempo,
+         self.difficulty, self.approach_rate,
+         is_use_new_files, use_game_background) = settings
         self.screen_width, self.screen_height = 1200, 675
         self.data = GameData(
-            difficulty=difficulty,
+            seed=seed,
+            difficulty=self.difficulty,
             score=0,
-            approach_rate=approach_rate,
+            approach_rate=self.approach_rate,
             combo=0,
             highest_combo=0,
             perfect_count=0,
@@ -51,13 +55,13 @@ class Game:
 
         # Load the image for the cursor
         cursor_img_scale_factor = 1.5
-        cursor_img = pygame.image.load('data/images/cursor.png').convert_alpha()
+        cursor_img = pygame.image.load('game/data/images/cursor.png').convert_alpha()
         cursor_img = pygame.transform.smoothscale(cursor_img, (
             int(cursor_img.get_width() * cursor_img_scale_factor),
             int(cursor_img.get_height() * cursor_img_scale_factor)))
         cursor_img_rect = cursor_img.get_rect()
 
-        cursor_pressed_img = pygame.image.load('data/images/cursor_pressed.png').convert_alpha()
+        cursor_pressed_img = pygame.image.load('game/data/images/cursor_pressed.png').convert_alpha()
         cursor_pressed_img = pygame.transform.smoothscale(cursor_pressed_img, (
             int(cursor_pressed_img.get_width() * cursor_img_scale_factor),
             int(cursor_pressed_img.get_height() * cursor_img_scale_factor)))
@@ -126,9 +130,9 @@ class Game:
 
     def menu(self):
         self.data = GameData(
-            difficulty=difficulty,
+            difficulty=self.difficulty,
             score=0,
-            approach_rate=approach_rate,
+            approach_rate=self.approach_rate,
             combo=0,
             highest_combo=0,
             perfect_count=0,
@@ -145,7 +149,7 @@ class Game:
 
     def load(self):
         # Once the settings are finalized, initialize the other scenes accordingly
-        self.game_scene = GameScene(self.window, self.data, self.cursor_images)
+        self.game_scene = GameScene(self.window, self.data, self.cursor_images, self.settings)
         self.pause_scene = PauseScene(self.window, self.cursor_images)
 
         # assign expensive task to loading scene to run in a separate thread
@@ -169,9 +173,13 @@ class GameScene:
     """
     Contains all the logic in the main gameplay loop
     """
-    def __init__(self, window, data, cursor_images):
-        self.screen_width, self.screen_height = window.get_size()
 
+    def __init__(self, window, data, cursor_images, settings):
+        self.screen_width, self.screen_height = window.get_size()
+        self.settings = settings
+        (youtube_link, seed, given_tempo,
+         difficulty, approach_rate,
+         is_use_new_files, use_game_background) = settings
         self.window = window
         self.clock = None
         self.steps = 0
@@ -194,13 +202,11 @@ class GameScene:
         self.score_label_rect.topright = (self.screen_width - 10, 10)
 
         self.cursor_images = cursor_images
-        self.tap_sound_effect = mixer.Sound('data/audio/sound_effects/normal-hitnormal.ogg')
+        self.tap_sound_effect = mixer.Sound('game/data/audio/sound_effects/normal-hitnormal.ogg')
         self.tap_sound_effect.set_volume(0.3)  # set volume
 
         self.audio_file_full_path = None
         self.pattern_manager = None
-        self.mode = mode
-        self.debug_colors = None
         self.click_sound_effect = None
         self.music_data = None
         self.background = None
@@ -224,6 +230,10 @@ class GameScene:
         """
         Collect all expensive tasks to pass to the loading scene to run in a separate thread
         """
+        (youtube_link, seed, given_tempo,
+         difficulty, approach_rate,
+         is_use_new_files, use_game_background) = self.settings
+
         # set to True to skip downloading and processing
         self.load_assets(keep_files=True, use_new_files=is_use_new_files)
 
@@ -232,8 +242,6 @@ class GameScene:
         self.pattern_manager.generate_map(self.music_data)
         self.pattern_manager.hot_load_caches()
         self.pattern_manager.prerender_patterns(win)
-        if self.mode == "debug":
-            self.debug_mode_setup()
 
     def load_assets(self, keep_files=True, use_new_files=False):
         """
@@ -242,6 +250,9 @@ class GameScene:
         :param use_new_files: Deletes the saved files and use new ones, set to True if selecting a new song,
         False if load from existing files
         """
+        (youtube_link, seed, given_tempo,
+         difficulty, approach_rate,
+         is_use_new_files, use_game_background) = self.settings
 
         file_path = os.path.join("data", "audio")
         file_name = "audio.mp3"
@@ -278,7 +289,7 @@ class GameScene:
 
         # Set game background if desired
         if self.background is None and use_game_background:
-            background = pygame.image.load("data/images/background.png").convert()
+            background = pygame.image.load("game/data/images/background.png").convert()
             """
             We compute the brightness value of the background image by calculating the root mean square (RMS) of all
             pixel color values. Our aim is to darken the image for minimal gameplay impact.
@@ -340,25 +351,6 @@ class GameScene:
 
             if os.path.exists(onset_bars_file):
                 os.remove(onset_bars_file)
-
-    def debug_mode_setup(self):
-        onset_times, onset_durations, *_ = self.music_data
-        self.onset_time_frames = [int(i * self.fps) for i in onset_times]
-        self.onset_duration_frames = [int(i * self.fps) for i in onset_durations]
-        self.debug_maximum_t = max([onset_time + onset_duration for onset_time, onset_duration
-                                    in zip(self.onset_time_frames, self.onset_duration_frames)]) + 1
-        self.debug_colors = [
-            (0, 0, 0)
-            for _ in range(self.debug_maximum_t)
-        ]
-        for onset_time, onset_duration in zip(self.onset_time_frames, self.onset_duration_frames):
-            if onset_duration > self.fps * 0.5:  # ignore onsets > 0.5s
-                self.debug_colors[onset_time] = (240, 240, 240)
-                continue
-            for t in range(onset_duration):
-                color = min((onset_duration - t) * 480, 240)
-                self.debug_colors[onset_time + t] = (color, color, color)
-        self.click_sound_effect = mixer.Sound('data/audio/sound_effects/click.wav')
 
     def run(self):
         """
@@ -433,18 +425,12 @@ class GameScene:
         self.sync_game_and_music()
 
         win = pygame.Surface((self.screen_width, self.screen_height))
+        *_, use_game_background = self.settings
         if use_game_background:
             win.blit(self.background, (0, 0))  # Use loaded game background
         else:
             win.fill((0, 0, 0))  # Fill the surface with black color
         self.window_buffer.fill((0, 0, 0))
-
-        if self.mode == "debug":
-            rect = pygame.Rect(0, 0, 100, 100)  # Create a rectangle for the top left corner
-            if self.steps < self.debug_maximum_t:
-                pygame.draw.rect(win, self.debug_colors[self.steps], rect)  # Fill the rectangle according to the onsets
-            if self.steps in self.onset_time_frames:
-                self.click_sound_effect.play()
 
         # rendering objects
         isMissed = not self.pattern_manager.render_patterns(win, self.steps)
@@ -512,6 +498,7 @@ class PauseScene:
     """
     Contains all the logic in the game paused state
     """
+
     def __init__(self, window, cursor_images):
         self.quit_click = False
         self.resume_selected = False
@@ -573,7 +560,8 @@ class PauseScene:
             quit_button.select()
 
         # Menu button
-        menu_button = Button(font, "MENU", text_color, hover_color, selected_text_color, (25, 650), "bottomleft", self.input_manager)
+        menu_button = Button(font, "MENU", text_color, hover_color, selected_text_color, (25, 650), "bottomleft",
+                             self.input_manager)
         menu_button.render(win)
 
         if menu_button.is_clicked:
@@ -652,6 +640,7 @@ class MenuScene:
     """
     Contains all the logic in the menu scene
     """
+
     def __init__(self, window, data, cursor_images):
         self.start_click = False
         self.window = window
@@ -677,7 +666,7 @@ class MenuScene:
         self.button_margin = 10
         self.button_color = (0, 0, 0)
         self.button_font = pygame.font.Font(None, 60)
-        self.button_hover_color = (128, 240, 255) # Neon Blue color
+        self.button_hover_color = (128, 240, 255)  # Neon Blue color
         self.button_text_color = (255, 255, 255)  # White color
         self.button_selected_text_color = (245, 255, 120)  # Light Yellow color
 
@@ -740,7 +729,7 @@ class MenuScene:
 
         # Draw approach rate label
         approach_rate_label = Label(self.label_font, self.approach_rate_label_text, self.label_color,
-                                 (self.approach_rate_label_pos_x, self.approach_rate_label_pos_y), "topleft")
+                                    (self.approach_rate_label_pos_x, self.approach_rate_label_pos_y), "topleft")
         approach_rate_label.render(win)
 
         # Draw approach rate buttons
@@ -748,8 +737,8 @@ class MenuScene:
             button_pos_x = self.start_x + 20 + (self.button_width + self.button_margin) * i
             button_text = str(i + 1)
             approach_rate_button = Button(self.button_font, button_text, self.button_text_color,
-                                       self.button_hover_color, self.button_selected_text_color,
-                                       (button_pos_x, self.approach_rate_button_pos_y), "center", self.input_manager)
+                                          self.button_hover_color, self.button_selected_text_color,
+                                          (button_pos_x, self.approach_rate_button_pos_y), "center", self.input_manager)
             if approach_rate_button.is_clicked:
                 self.data.approach_rate = i + 1
 
@@ -762,8 +751,8 @@ class MenuScene:
 
         # Start button
         start_button = Button(self.button_font, self.start_label_text, self.button_text_color,
-                                       self.button_hover_color, self.button_selected_text_color,
-                                       (self.screen_width - 25, self.screen_height - 25), "bottomright", self.input_manager)
+                              self.button_hover_color, self.button_selected_text_color,
+                              (self.screen_width - 25, self.screen_height - 25), "bottomright", self.input_manager)
 
         start_button.render(win)
 
@@ -788,6 +777,7 @@ class EndScene:
     """
     Contains all the logic in the end scene
     """
+
     def __init__(self, window, data, cursor_images):
         self.end_click = False
         self.menu_click = False
@@ -834,48 +824,48 @@ class EndScene:
 
         # Set Game Over Label
         game_over_label = Label(self.label_font, self.game_over_label_text, self.label_color,
-                                    (self.screen_width // 2, 100), "center")
+                                (self.screen_width // 2, 100), "center")
         game_over_label.render(win)
 
         # Set Perfect Count Label
         perfect_count_label = Label(self.label_font, self.perfect_count_label_text, self.label_color,
-                                (700, 200), "topright")
+                                    (700, 200), "topright")
         perfect_count_label.render(win)
 
         perfect_count_value_label = Label(self.label_font, "{}".format(self.data.perfect_count), self.label_color,
-                                    (750, 200), "topleft")
+                                          (750, 200), "topleft")
         perfect_count_value_label.render(win)
 
         # Set Miss Count Label
         miss_count_label = Label(self.label_font, self.miss_count_label_text, self.label_color,
-                                    (700, 280), "topright")
+                                 (700, 280), "topright")
         miss_count_label.render(win)
 
         miss_count_value_label = Label(self.label_font, "{}".format(self.data.miss_count), self.label_color,
-                                          (750, 280), "topleft")
+                                       (750, 280), "topleft")
         miss_count_value_label.render(win)
 
         # Set Highest Combo Label
         highest_combo_label = Label(self.label_font, self.highest_combo_label_text, self.label_color,
-                                 (700, 360), "topright")
+                                    (700, 360), "topright")
         highest_combo_label.render(win)
 
         highest_combo_value_label = Label(self.label_font, "{}".format(self.data.highest_combo), self.label_color,
-                                       (750, 360), "topleft")
+                                          (750, 360), "topleft")
         highest_combo_value_label.render(win)
 
         # Set Total Score Label
         total_score_label = Label(self.label_font, self.total_score_label_text, self.label_color,
-                                    (700, 440), "topright")
+                                  (700, 440), "topright")
         total_score_label.render(win)
 
         total_score_value_label = Label(self.label_font, "{}".format(self.data.score), self.label_color,
-                                          (750, 440), "topleft")
+                                        (750, 440), "topleft")
         total_score_value_label.render(win)
 
         # End button
         end_button = Button(self.label_font, self.end_label_text, self.button_text_color,
-                              self.button_hover_color, self.button_selected_text_color,
+                            self.button_hover_color, self.button_selected_text_color,
                             (self.screen_width - 25, 650), "bottomright", self.input_manager)
 
         end_button.render(win)
@@ -886,8 +876,8 @@ class EndScene:
 
         # Restart button
         menu_button = Button(self.label_font, self.menu_label_text, self.button_text_color,
-                            self.button_hover_color, self.button_selected_text_color,
-                            (25, 650), "bottomleft", self.input_manager)
+                             self.button_hover_color, self.button_selected_text_color,
+                             (25, 650), "bottomleft", self.input_manager)
 
         menu_button.render(win)
 
@@ -912,6 +902,7 @@ class LoadingScene:
     """
     Contains all the logic in the loading scene
     """
+
     def __init__(self, window, task, cursor_images):
         self.window = window
         self.screen_width, self.screen_height = window.get_size()
@@ -950,11 +941,11 @@ class LoadingScene:
             win.fill((0, 0, 0))
 
             fps = 30
-            if i//fps == 3:  # prevent overflow of index
+            if i // fps == 3:  # prevent overflow of index
                 i = 0
             else:
-                #Loading label
-                loading_label = Label(font, loading_text[i//fps], text_color,
+                # Loading label
+                loading_label = Label(font, loading_text[i // fps], text_color,
                                       (self.screen_width // 2, self.screen_height // 2), "center")
                 loading_label.render(win)
 
@@ -977,6 +968,7 @@ class ReadyScene:
     """
     Contains all the logic in the ready scene
     """
+
     def __init__(self, window, cursor_images):
         self.play_selected = False
         self.window = window
@@ -1011,13 +1003,13 @@ class ReadyScene:
 
         # Loading Text
         loading_label = Label(font, loading_text, text_color,
-                                  (self.screen_width // 2, self.screen_height // 2 - 100), "center")
+                              (self.screen_width // 2, self.screen_height // 2 - 100), "center")
         loading_label.render(win)
 
         # Play button
         play_button = Button(font, play_text, text_color,
-                              hover_color, selected_text_color,
-                              (self.screen_width // 2, self.screen_height // 2 + 100), "center", self.input_manager)
+                             hover_color, selected_text_color,
+                             (self.screen_width // 2, self.screen_height // 2 + 100), "center", self.input_manager)
 
         play_button.render(win)
 
@@ -1037,12 +1029,3 @@ class ReadyScene:
         pygame.event.pump()
         pygame.display.update()
         self.clock.tick(60)
-
-
-def main():
-    game = Game()
-    game.run()
-
-
-if __name__ == '__main__':
-    main()
