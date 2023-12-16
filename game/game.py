@@ -265,6 +265,7 @@ class GameScene:
                 yt_link = file.read().strip()
         except FileNotFoundError:
             pass
+        # Check if previous youtube link is the same as the current one, if not, redownload all the files
         use_new_files = yt_link != youtube_link
 
         if use_new_files:
