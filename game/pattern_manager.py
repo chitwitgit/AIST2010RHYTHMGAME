@@ -16,7 +16,7 @@ class PatternManager:
         self.stroke_width = 5
         self.seed = seed
         self.tempo = tempo
-        self.beat_duration = 60 / self.tempo
+        self.beat_duration = 60 / self.tempo if self.tempo is not None else None
 
         self.patterns = []
         self.pattern_queue = None
@@ -41,7 +41,10 @@ class PatternManager:
         :param music_data: contains the timings, durations and bar numbers of the onsets
         :return: nothing
         '''
-        onset_times, onset_durations, onset_bars, *_ = music_data
+        onset_times, onset_durations, onset_bars, predicted_tempo = music_data
+        if self.tempo is None:
+            self.tempo = predicted_tempo
+            self.beat_duration = 60 / self.tempo
         onset_time_frames = [int(i * self.fps) for i in onset_times]
         onset_duration_frames = [int(i * self.fps) for i in onset_durations]
         self.generate_patterns(onset_time_frames, onset_duration_frames, onset_bars)
