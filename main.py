@@ -10,9 +10,8 @@ def main():
     difficulty = args.difficulty if args.difficulty is not None else 5
     approach_rate = args.ar if args.ar is not None else 10
 
-    is_use_new_files = True
     use_game_background = True
-    settings = youtube_link, seed, given_tempo, difficulty, approach_rate, is_use_new_files, use_game_background
+    settings = youtube_link, seed, given_tempo, difficulty, approach_rate, use_game_background
 
     game = Game(settings)
     game.run()

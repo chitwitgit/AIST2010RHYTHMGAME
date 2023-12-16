@@ -34,7 +34,7 @@ class Game:
         self.settings = settings
         (youtube_link, seed, given_tempo,
          self.difficulty, self.approach_rate,
-         is_use_new_files, use_game_background) = settings
+         use_game_background) = settings
         self.screen_width, self.screen_height = 1200, 675
         self.data = GameData(
             seed=seed,
@@ -179,7 +179,7 @@ class GameScene:
         self.settings = settings
         (youtube_link, seed, given_tempo,
          difficulty, approach_rate,
-         is_use_new_files, use_game_background) = settings
+         use_game_background) = settings
         self.window = window
         self.clock = None
         self.steps = 0
@@ -230,12 +230,9 @@ class GameScene:
         """
         Collect all expensive tasks to pass to the loading scene to run in a separate thread
         """
-        (youtube_link, seed, given_tempo,
-         difficulty, approach_rate,
-         is_use_new_files, use_game_background) = self.settings
 
         # set to True to skip downloading and processing
-        self.load_assets(keep_files=True, use_new_files=is_use_new_files)
+        self.load_assets(keep_files=True)
 
         win = pygame.Surface((self.screen_width, self.screen_height))
         win.fill((0, 0, 0))
@@ -243,7 +240,7 @@ class GameScene:
         self.pattern_manager.hot_load_caches()
         self.pattern_manager.prerender_patterns(win)
 
-    def load_assets(self, keep_files=True, use_new_files=False):
+    def load_assets(self, keep_files=True):
         """
         Loads files for the audio and computed musical information
         :param keep_files: Saves the files to the disk when finished
@@ -252,15 +249,24 @@ class GameScene:
         """
         (youtube_link, seed, given_tempo,
          difficulty, approach_rate,
-         is_use_new_files, use_game_background) = self.settings
+         use_game_background) = self.settings
 
-        file_path = os.path.join("data", "audio")
+        file_path = os.path.join("game", "data", "audio")
         file_name = "audio.mp3"
         self.audio_file_full_path = os.path.join(file_path, file_name)
-        onset_times_file = os.path.join("data", "onset_times.npy")
-        onset_durations_file = os.path.join("data", "onset_durations.npy")
-        onset_bars_file = os.path.join("data", "onset_bars.npy")
-        tempo_file = os.path.join("data", "tempo.npy")
+        onset_times_file = os.path.join("game", "data", "onset_times.npy")
+        onset_durations_file = os.path.join("game", "data", "onset_durations.npy")
+        onset_bars_file = os.path.join("game", "data", "onset_bars.npy")
+        tempo_file = os.path.join("game", "data", "tempo.npy")
+        yt_file = os.path.join("game", "data", "yt_link.txt")
+
+        yt_link = ""
+        try:
+            with open(yt_file, "r") as file:
+                yt_link = file.read().strip()
+        except FileNotFoundError:
+            pass
+        use_new_files = yt_link != youtube_link
 
         if use_new_files:
             # Remove all the existing files
@@ -340,6 +346,11 @@ class GameScene:
             np.save(onset_durations_file, onset_durations)
             np.save(onset_bars_file, onset_bars)
             np.save(tempo_file, tempo)
+            try:
+                with open(yt_file, "w") as file:
+                    file.write(youtube_link)
+            except FileNotFoundError:
+                pass
         else:
             os.remove(self.audio_file_full_path)
 
