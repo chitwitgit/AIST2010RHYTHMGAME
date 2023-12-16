@@ -82,6 +82,8 @@ class Game:
                 self.pause_game()
             if state == "Play":
                 self.play_game()
+            if state == "Restart":
+                self.restart()
             if state == "Resume":
                 self.resume_game()
             if state == "Menu":
@@ -105,10 +107,33 @@ class Game:
     def play_game(self):
         self.current_scene = self.game_scene
 
+    def restart(self):
+        data_difficulty = self.data.difficulty
+        data_approach_rate = self.data.approach_rate
+        self.data = GameData(
+            difficulty=data_difficulty,
+            score=0,
+            approach_rate=data_approach_rate,
+            combo=0,
+            highest_combo=0,
+            perfect_count=0,
+            miss_count=0
+        )
+        self.load()
+
     def resume_game(self):
         self.play_game()
 
     def menu(self):
+        self.data = GameData(
+            difficulty=difficulty,
+            score=0,
+            approach_rate=approach_rate,
+            combo=0,
+            highest_combo=0,
+            perfect_count=0,
+            miss_count=0
+        )
         self.menu_scene.start_click = False
         self.current_scene = self.menu_scene
 
@@ -518,7 +543,7 @@ class PauseScene:
                 self.countdown()
                 return "Resume"
             elif self.restart_click:
-                return "Load"
+                return "Restart"
             elif self.menu_click:
                 return "Menu"
             elif self.quit_click:
