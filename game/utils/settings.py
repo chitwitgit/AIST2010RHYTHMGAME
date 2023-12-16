@@ -19,7 +19,7 @@ else:
 if args.difficulty is not None:
     difficulty = args.difficulty
 else:
-    difficulty = 6  # usually (0, 10]
+    difficulty = 5  # usually (0, 10]
 if args.ar is not None:
     approach_rate = args.ar
 else:
