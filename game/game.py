@@ -115,6 +115,7 @@ class Game:
         data_difficulty = self.data.difficulty
         data_approach_rate = self.data.approach_rate
         self.data = GameData(
+            seed=self.data.seed,
             difficulty=data_difficulty,
             score=0,
             approach_rate=data_approach_rate,
@@ -130,6 +131,7 @@ class Game:
 
     def menu(self):
         self.data = GameData(
+            seed=self.data.seed,
             difficulty=self.difficulty,
             score=0,
             approach_rate=self.approach_rate,
