@@ -5,6 +5,7 @@ if args.youtube is not None:
 else:
     youtube_link = "https://www.youtube.com/watch?v=HFPBd_mQYhg"
     youtube_link = "https://www.youtube.com/watch?v=ZRtdQ81jPUQ"
+    #youtube_link = "https://www.youtube.com/watch?v=gcgKUcJKxIs"
 
 if args.seed is not None:
     seed = args.seed

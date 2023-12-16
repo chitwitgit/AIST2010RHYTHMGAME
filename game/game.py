@@ -540,7 +540,7 @@ class PauseScene:
 
         # Quit button
         quit_button = Button(font, "QUIT", text_color, hover_color, selected_text_color, (self.screen_width - 25, 650),
-                             "bottomright")
+                             "bottomright", self.input_manager)
         quit_button.render(win)
 
         if quit_button.is_clicked:
@@ -548,7 +548,7 @@ class PauseScene:
             quit_button.select()
 
         # Menu button
-        menu_button = Button(font, "MENU", text_color, hover_color, selected_text_color, (25, 650), "bottomleft")
+        menu_button = Button(font, "MENU", text_color, hover_color, selected_text_color, (25, 650), "bottomleft", self.input_manager)
         menu_button.render(win)
 
         if menu_button.is_clicked:
@@ -557,7 +557,7 @@ class PauseScene:
 
         # Resume button
         resume_button = Button(font, "RESUME", text_color, hover_color, selected_text_color,
-                               (self.screen_width // 2, 250), "center")
+                               (self.screen_width // 2, 250), "center", self.input_manager)
         resume_button.render(win)
 
         if resume_button.is_clicked:
@@ -566,7 +566,7 @@ class PauseScene:
 
         # Restart button
         restart_button = Button(font, "RESTART", text_color, hover_color, selected_text_color,
-                                (self.screen_width // 2, 400), "center")
+                                (self.screen_width // 2, 400), "center", self.input_manager)
         restart_button.render(win)
 
         if restart_button.is_clicked:
@@ -702,7 +702,7 @@ class MenuScene:
             button_text = str(i + 1)
             difficulty_button = Button(self.button_font, button_text, self.button_text_color, self.button_hover_color,
                                        self.button_selected_text_color, (button_pos_x, self.difficulty_button_pos_y),
-                                       "center")
+                                       "center", self.input_manager)
             if difficulty_button.is_clicked:
                 self.data.difficulty = i + 1
 
@@ -724,7 +724,7 @@ class MenuScene:
             button_text = str(i + 1)
             approach_rate_button = Button(self.button_font, button_text, self.button_text_color,
                                        self.button_hover_color, self.button_selected_text_color,
-                                       (button_pos_x, self.approach_rate_button_pos_y), "center")
+                                       (button_pos_x, self.approach_rate_button_pos_y), "center", self.input_manager)
             if approach_rate_button.is_clicked:
                 self.data.approach_rate = i + 1
 
@@ -738,7 +738,7 @@ class MenuScene:
         # Start button
         start_button = Button(self.button_font, self.start_label_text, self.button_text_color,
                                        self.button_hover_color, self.button_selected_text_color,
-                                       (self.screen_width - 25, self.screen_height - 25), "bottomright")
+                                       (self.screen_width - 25, self.screen_height - 25), "bottomright", self.input_manager)
 
         start_button.render(win)
 
@@ -851,7 +851,7 @@ class EndScene:
         # End button
         end_button = Button(self.label_font, self.end_label_text, self.button_text_color,
                               self.button_hover_color, self.button_selected_text_color,
-                            (self.screen_width - 25, 650), "bottomright")
+                            (self.screen_width - 25, 650), "bottomright", self.input_manager)
 
         end_button.render(win)
 
@@ -862,7 +862,7 @@ class EndScene:
         # Restart button
         menu_button = Button(self.label_font, self.menu_label_text, self.button_text_color,
                             self.button_hover_color, self.button_selected_text_color,
-                            (25, 650), "bottomleft")
+                            (25, 650), "bottomleft", self.input_manager)
 
         menu_button.render(win)
 
@@ -992,7 +992,7 @@ class ReadyScene:
         # Play button
         play_button = Button(font, play_text, text_color,
                               hover_color, selected_text_color,
-                              (self.screen_width // 2, self.screen_height // 2 + 100), "center")
+                              (self.screen_width // 2, self.screen_height // 2 + 100), "center", self.input_manager)
 
         play_button.render(win)
 

@@ -6,7 +6,7 @@ class Button:
     """
     Button class to represent clickable text in different scenes
     """
-    def __init__(self, font, text, color, hover_color, selected_color, coords, pos):
+    def __init__(self, font, text, color, hover_color, selected_color, coords, pos, input_manager):
         self.font = font
         self.text = text
         self.color = color
@@ -15,7 +15,7 @@ class Button:
         self.coords = coords
         self.pos = pos
         self.selected = False
-        self.input_manager = InputManager()
+        self.input_manager = input_manager
 
         self.surface = self.font.render(self.text, True, color)
         if self.pos == "topleft":
@@ -42,7 +42,6 @@ class Button:
         return False
 
     def render(self, surf):
-        self.input_manager.update()
         if self.hover:
             color = self.hover_color
         elif self.selected:
@@ -80,7 +79,7 @@ class Label:
         elif self.pos == "bottomright":
             self.label_rect = self.label_surface.get_rect(bottomright=self.coords)
         else:
-            self.rect = self.surface.get_rect(center=self.coords)
+            self.label_rect = self.label_surface.get_rect(center=self.coords)
 
     def render(self, surf):
         surf.blit(self.label_surface, self.label_rect)
