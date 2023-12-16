@@ -267,8 +267,7 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512, tempo=None):
         tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=fs)
         tempo = np.around(tempo, 0)
 
-    print('tempo:', tempo)
-    print('frame rate:', fs)
+
     x_background = x
     for x in [x_foreground, x_background]:
         y = abs(librosa.stft(x, n_fft=fft_length, hop_length=fft_hop_length, center=False))
@@ -294,7 +293,6 @@ def onset_detection(x, fs, fft_length=1024, fft_hop_length=512, tempo=None):
     beats_per_bar = 8  # usually it's 4 beats per bar, but having 8 beats per pattern makes a more enjoyable map
     bar_duration = 60 / tempo * beats_per_bar
     onset_bars_list = [(i // bar_duration + 1) for i in onset_list]
-    print('durations:', duration_list[0])
 
     # merge background and vocal onsets (for future developement)
     # onset_times, onset_durations, onset_labels = merge_vocal_background_with_padding(onset_list[0], duration_list[0], onset_list[1], duration_list[1], tempo)
