@@ -6,7 +6,7 @@ def main():
     # Manage command line arguments
     youtube_link = args.youtube if args.youtube is not None else "https://www.youtube.com/watch?v=-LwBbLa_Vhc"
     seed = args.seed if args.seed is not None else 777
-    given_tempo = args.tempo if args.tempo is not None else None
+    given_tempo = args.tempo
     if youtube_link == "https://www.youtube.com/watch?v=-LwBbLa_Vhc":   # for demonstration purposes
         given_tempo = 246
     difficulty = args.difficulty if args.difficulty is not None else 5
